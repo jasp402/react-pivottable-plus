@@ -451,7 +451,6 @@ function makeRenderer(opts = {}) {
           // Full heatmap: Compare values across the entire table
           // Note: allValues already contains all cell values from earlier collection
           const colorScale = colorScaleGenerator(allValues);
-          
           pivotData.forEachCell((val, rowKey, colKey) => {
             if (val !== null && val !== undefined && !isNaN(val)) {
               valueCellColors[`${flatKey(rowKey)}_${flatKey(colKey)}`] = colorScale(val);
@@ -464,7 +463,6 @@ function makeRenderer(opts = {}) {
         else if (opts.heatmapMode === 'row') {
           // Row heatmap: Compare values within each row
           // Note: rowValues already populated from earlier collection
-          
           const rowColorScales = {};
           Object.entries(rowValues).forEach(([flatRow, values]) => {
             if (values.length > 0) {
@@ -485,7 +483,6 @@ function makeRenderer(opts = {}) {
         else if (opts.heatmapMode === 'col') {
           // Column heatmap: Compare values within each column
           // Note: colValues already populated from earlier collection
-          
           const colColorScales = {};
           Object.entries(colValues).forEach(([flatCol, values]) => {
             if (values.length > 0) {
@@ -598,6 +595,7 @@ function makeRenderer(opts = {}) {
                     : 1
                 }
                 onClick={toggleHandler}
+                style={{cursor: 'pointer'}}
               >
                 {icon && <span className="pvtAttr">{icon}</span>}
                 <span className="pvtAttrLabel">{attrValue}</span>
@@ -1362,6 +1360,20 @@ function makeRenderer(opts = {}) {
                 className += ' expanded';
                 icon = pivotSettings.arrowExpanded;
               }
+              // Add pointer cursor for collapsible row labels
+              rowCells.push(
+                <th
+                  key={`rowLabel-${level}`}
+                  className={className}
+                  rowSpan={rowspan}
+                  onClick={this.toggleRowKey(flatRowKey)}
+                  style={{cursor: 'pointer'}}
+                >
+                  {icon && <span className="pvtAttr">{icon}</span>}
+                  <span>{rowKey[level]}</span>
+                </th>
+              );
+              continue;
             }
             
             rowCells.push(
