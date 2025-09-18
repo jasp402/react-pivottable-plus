@@ -284,47 +284,32 @@ function makeRenderer(opts = {}) {
      * each level.
      */
     calcAttrSpans(attrArr, numAttrs) {
-      const spans = {};
-      const keys = {};
-      for (let i = 0; i < numAttrs; i++) {
-        spans[i] = {};
-        keys[i] = {};
-      }
-      const matched = {};
+
+      const spans = [];
+      const li = Array(numAttrs).map(() => 0);
+      let lv = Array(numAttrs).map(() => null);
       for (let i = 0; i < attrArr.length; i++) {
-        const arr = attrArr[i];
-        const flatArr = [];
-        for (let j = 0; j < arr.length; j++) {
-          flatArr.push(flatKey(arr.slice(0, j + 1)));
+        const cv = attrArr[i];
+        const isSubtotal = cv[cv.length - 1] === '__subtotal__';
+        const actualCv = isSubtotal ? cv.slice(0, -1) : cv;
+        
+        const ent = [];
+        let depth = 0;
+        const limit = Math.min(lv.length, actualCv.length);
+        while (depth < limit && lv[depth] === actualCv[depth]) {
+          ent.push(-1);
+          spans[li[depth]][depth]++;
+          depth++;
         }
-        for (let j = 0; j < arr.length; j++) {
-          if (flatArr[j] in matched) {
-            continue;
-          }
-          matched[flatArr[j]] = 1;
-          if (j > 0) {
-            if (arr[j - 1] === arr[j]) {
-              spans[j][flatArr[j]] = 0;
-              continue;
-            }
-          }
-          let count = 1;
-          while (i + count < attrArr.length) {
-            if (j >= attrArr[i + count].length) {
-              break;
-            }
-            if (
-              flatKey(attrArr[i + count].slice(0, j + 1)) !== flatArr[j]
-            ) {
-              break;
-            }
-            count++;
-          }
-          spans[j][flatArr[j]] = count;
-          keys[j][flatArr[j]] = arr[j];
+        while (depth < actualCv.length) {
+          li[depth] = i;
+          ent.push(1);
+          depth++;
         }
+        spans.push(ent);
+        lv = actualCv;
       }
-      return {spans, keys};
+      return spans;
     }
 
     static heatmapMappers(
@@ -484,169 +469,111 @@ function makeRenderer(opts = {}) {
 
     renderColHeaderRow(attrName, attrIdx, pivotSettings) {
       const {
-        colKeys,
-        colAttrs,
         rowAttrs,
-        colSubtotalDisplay,
-        arrowCollapsed,
-        arrowExpanded,
-      } = pivotSettings;
-      const numAttrs = colAttrs.length;
-      const attrSpan = colKeys.length;
-      const totalHeadRowSpan = colAttrs.length + (rowAttrs.length ? 1 : 0);
-      const visibleColKeys = this.visibleKeys(
+        colAttrs,
         colKeys,
-        this.state.collapsedCols,
-        numAttrs,
-        colSubtotalDisplay
-      );
-      const colSpans = this.calcAttrSpans(visibleColKeys, numAttrs);
-      const cells = [];
-      let colKeyIdx = 0;
+        visibleColKeys,
+        colAttrSpans,
+        rowTotals,
+        arrowExpanded,
+        arrowCollapsed,
+        colSubtotalDisplay,
+        maxColVisible,
+      } = pivotSettings;
 
-      if (attrIdx === 0) {
-        // Top-level: only collapsible attribute values
-        const rowspan = rowAttrs.length === 0 ? 1 : 2;
-        if (rowAttrs.length !== 0) {
-          cells.push(
+      const spaceCell =
+        attrIdx === 0 && rowAttrs.length !== 0 ? (
+          <th
+            key="padding"
+            colSpan={rowAttrs.length}
+            rowSpan={colAttrs.length}
+          />
+        ) : null;
+
+      const needToggle =
+        opts.subtotals &&
+        colSubtotalDisplay.enabled &&
+        attrIdx !== colAttrs.length - 1;
+      let clickHandle = null;
+      let subArrow = null;
+      if (needToggle) {
+        clickHandle =
+          attrIdx + 1 < maxColVisible
+            ? this.collapseAttr(false, attrIdx, colKeys)
+            : this.expandAttr(false, attrIdx, colKeys);
+        subArrow =
+          (attrIdx + 1 < maxColVisible ? arrowExpanded : arrowCollapsed) + ' ';
+      }
+      const attrNameCell = (
+        <th key="label" className="pvtAxisLabel">
+          {attrName}
+        </th>
+      );
+
+      const attrValueCells = [];
+      const rowIncrSpan = rowAttrs.length !== 0 ? 1 : 0;
+      let i = 0;
+      while (i < visibleColKeys.length) {
+        const colKey = visibleColKeys[i];
+        const isSubtotalCol = colKey[colKey.length - 1] === '__subtotal__';
+        const actualColKey = isSubtotalCol ? colKey.slice(0, -1) : colKey;
+        
+        const colSpan = attrIdx < actualColKey.length ? colAttrSpans[i][attrIdx] : 1;
+        if (attrIdx < actualColKey.length) {
+          const rowSpan = 1 + (attrIdx === colAttrs.length - 1 ? rowIncrSpan : 0);
+          const flatColKey = flatKey(actualColKey.slice(0, attrIdx + 1));
+          const onClick = needToggle ? this.toggleColKey(flatColKey) : null;
+          
+          let headerText = actualColKey[attrIdx];
+          let headerClass = 'pvtColLabel';
+          
+          if (isSubtotalCol) {
+            headerText = `${headerText} (Subtotal)`;
+            headerClass += ' pvtSubtotal';
+          }
+          
+          attrValueCells.push(
             <th
-              key="empty-0"
-              colSpan={rowAttrs.length}
-              rowSpan={colAttrs.length}
+              className={headerClass}
+              key={'colKey-' + flatColKey + (isSubtotalCol ? '-subtotal' : '')}
+              colSpan={colSpan}
+              rowSpan={rowSpan}
+              onClick={onClick}
+            >
+              {needToggle
+                ? (this.state.collapsedCols[flatColKey]
+                    ? arrowCollapsed
+                    : arrowExpanded) + ' '
+                : null}
+              {headerText}
+            </th>
+          );
+        } else if (attrIdx === actualColKey.length) {
+          const rowSpan = colAttrs.length - actualColKey.length + rowIncrSpan;
+          attrValueCells.push(
+            <th
+              className={`pvtColLabel ${isSubtotalCol ? 'pvtSubtotal' : ''}`}
+              key={'colKeyBuffer-' + flatKey(actualColKey) + (isSubtotalCol ? '-subtotal' : '')}
+              colSpan={colSpan}
+              rowSpan={rowSpan}
             />
           );
         }
-        cells.push(
-          <th className="pvtAxisLabel" key={`colAttr${attrIdx}`}>{attrName}</th>
-        );
-        let lastParent = null;
-        visibleColKeys.forEach((colKey, idx) => {
-          if (colKey.length < 1) return;
-          const parent = colKey[0];
-          if (parent !== lastParent) {
-            const flatColKey = flatKey([parent]);
-            let isCollapsed = this.state.collapsedCols[flatColKey];
-            let className = 'pvtColLabel';
-            let icon = null;
-            if (colAttrs.length > 1) {
-              if (isCollapsed) {
-                className += ' collapsed';
-                icon = arrowCollapsed;
-              } else {
-                className += ' expanded';
-                icon = arrowExpanded;
-              }
-            }
-            cells.push(
-                <th
-                  className={className}
-                  key={`colKey${attrIdx}-${idx}`}
-                  colSpan={colSpans.spans[attrIdx][flatKey([parent])]} 
-                  rowSpan={1}
-                  onClick={this.toggleColKey(flatColKey)}
-                  style={{cursor: 'pointer'}}
-                >
-                  {icon && <span className="pvtAttr" style={{marginRight: '6px'}}>{icon}</span>}
-                  <span className="pvtAttrLabel">{parent}</span>
-                </th>
-            );
-            lastParent = parent;
-          }
-        });
-      } else if (attrIdx < colAttrs.length) {
-        // Intermediate: collapsible attribute values + subtotal cells
-        cells.push(
-          <th className="pvtAxisLabel" key={`colAttr${attrIdx}`}>{attrName}</th>
-        );
-        
-        let lastAncestryPath = null;
-        visibleColKeys.forEach((colKey, idx) => {
-          if (colKey.length !== attrIdx + 1) return;
-          const parent = colKey[attrIdx - 1];
-          const ancestryPath = colKey.slice(0, attrIdx).join('|');
-          
-          if (ancestryPath !== lastAncestryPath) {
-            cells.push(
-              <th
-                className="pvtSubtotalLabel"
-                key={`subtotalLabel-${attrIdx}-${ancestryPath}`}
-                rowSpan={colAttrs.length - attrIdx + 1}
-              >{parent} Subtotal</th>
-            );
-            lastAncestryPath = ancestryPath;
-          }
-
-          const flatColKey = flatKey(colKey.slice(0, attrIdx + 1));
-          const colSpan = colSpans.spans[attrIdx][flatColKey];
-          let isCollapsed = false;
-          let icon = null;
-          if (attrIdx + 1 < colAttrs.length) {
-            isCollapsed = this.state.collapsedCols[flatColKey];
-            if (isCollapsed) {
-              icon = arrowCollapsed;
-            } else {
-              icon = arrowExpanded;
-            }
-          }
-            cells.push(
-              <th
-                className={'pvtColLabel' + (isCollapsed ? ' collapsed' : ' expanded')}
-                key={`colKey${attrIdx}-${idx}`}
-                colSpan={colSpan}
-                rowSpan={attrIdx === colAttrs.length - 1 && rowAttrs.length !== 0 ? 2 : 1}
-                onClick={this.toggleColKey(flatColKey)}
-                style={{cursor: 'pointer'}}
-              >
-                {icon && <span className="pvtAttr" style={{marginRight: '6px'}}>{icon}</span>}
-                <span className="pvtAttrLabel">{colKey[attrIdx]}</span>
-              </th>
-          );
-        });
-      } else {
-        // Leaf: non-collapsible attribute values + subtotal cells
-        cells.push(
-          <th className="pvtAxisLabel" key={`colAttr${attrIdx}`}>{attrName}</th>
-        );
-        let lastParent = null;
-        visibleColKeys.forEach((colKey, idx) => {
-          if (colKey.length !== attrIdx) return;
-          const parent = colKey[attrIdx - 1];
-          if (parent !== lastParent) {
-            cells.push(
-              <th
-                className="pvtSubtotalLabel"
-                key={`subtotalLabel-leaf-${attrIdx}-${parent}`}
-                rowSpan={1}
-              >{parent} Subtotal</th>
-            );
-            lastParent = parent;
-          }
-          cells.push(
-            <th
-              className="pvtColLabel"
-              key={`colKey${attrIdx}-${idx}`}
-              colSpan={1}
-              rowSpan={1}
-              style={{cursor: 'default'}}
-            >
-              <span className="pvtAttrLabel">{colKey[attrIdx]}</span>
-            </th>
-          );
-        });
+        i = i + colSpan;
       }
 
-      if (pivotSettings.rowTotals && attrIdx === 0) {
-        cells.push(
+      const totalCell =
+        attrIdx === 0 && rowTotals ? (
           <th
-            className="pvtTotalLabel"
             key="total"
-            rowSpan={totalHeadRowSpan}
+            className="pvtTotalLabel"
+            rowSpan={colAttrs.length + Math.min(rowAttrs.length, 1)}
           >
             Totals
           </th>
-        );
-      }
+        ) : null;
 
+      const cells = [spaceCell, attrNameCell, ...attrValueCells, totalCell];
       return cells;
     }
 
@@ -694,30 +621,32 @@ function makeRenderer(opts = {}) {
       );
 
       const cells = [];
-
-      const isParentWithChildren = rowKey.length < rowAttrs.length;
+      const isSubtotalRow = rowKey[rowKey.length - 1] === '__subtotal__';
+      const actualRowKey = isSubtotalRow ? rowKey.slice(0, -1) : rowKey;
+      
+      const isParentWithChildren = actualRowKey.length < rowAttrs.length;
       const isCollapsedParent = isCollapsed && isParentWithChildren;
-      const isSubtotalRow = isParentWithChildren && opts.subtotals;
       
       visibleColKeys.forEach((colKey, i) => {
         try {
-          if (!rowKey || !colKey) {
-            console.warn('Invalid rowKey or colKey', rowKey, colKey);
+          if (!actualRowKey || !colKey) {
+            console.warn('Invalid rowKey or colKey', actualRowKey, colKey);
             cells.push(
               <td
                 className="pvtVal"
                 key={`pvtVal-${i}`}
-              >
-                -
-              </td>
+              />
             );
             return;
           }
           
           let aggregator, val, className, valCss = {};
           
-          if (isSubtotalRow) {
-            let value = this.calculateSubtotal(pivotData, rowKey, colKey, pivotSettings);
+          const isSubtotalCol = colKey[colKey.length - 1] === '__subtotal__';
+          const actualColKey = isSubtotalCol ? colKey.slice(0, -1) : colKey;
+          
+          if (isSubtotalRow || isSubtotalCol) {
+            let value = this.calculateSubtotal(pivotData, actualRowKey, actualColKey, pivotSettings);
             className = "pvtSubtotal";
             
             const tempAggregator = this.safeGetAggregator(pivotData, [], []);
@@ -727,14 +656,14 @@ function makeRenderer(opts = {}) {
             };
             
             if (opts.heatmapMode && rowMapper.totalColor) {
-              const cellColor = rowMapper.totalColor(rowKey[0]);
+              const cellColor = rowMapper.totalColor(actualRowKey[0]);
               if (cellColor) {
                 valCss = cellColor;
               }
             }
           } 
-          else if (colKey.length < colAttrs.length && this.state.collapsedCols[flatKey(colKey)]) {
-            let value = this.calculateSubtotal(pivotData, rowKey, colKey, pivotSettings);
+          else if (actualColKey.length < colAttrs.length && this.state.collapsedCols[flatKey(actualColKey)]) {
+            let value = this.calculateSubtotal(pivotData, actualRowKey, actualColKey, pivotSettings);
             className = "pvtSubtotal";
             
             const tempAggregator = this.safeGetAggregator(pivotData, [], []);
@@ -744,18 +673,18 @@ function makeRenderer(opts = {}) {
             };
             
             if (opts.heatmapMode && colMapper.totalColor) {
-              const cellColor = colMapper.totalColor(colKey[0]);
+              const cellColor = colMapper.totalColor(actualColKey[0]);
               if (cellColor) {
                 valCss = cellColor;
               }
             }
           } 
           else {
-            aggregator = this.safeGetAggregator(pivotData, rowKey, colKey);
+            aggregator = this.safeGetAggregator(pivotData, actualRowKey, actualColKey);
             className = "pvtVal";
             
             if (opts.heatmapMode && colMapper.bgColorFromRowColKey) {
-              const cellColor = colMapper.bgColorFromRowColKey(rowKey, colKey);
+              const cellColor = colMapper.bgColorFromRowColKey(actualRowKey, actualColKey);
               if (cellColor) {
                 valCss = cellColor;
               }
@@ -763,10 +692,10 @@ function makeRenderer(opts = {}) {
           }
           
           if (!aggregator || (aggregator.value() === null || aggregator.value() === undefined)) {
-            if (opts.subtotals && rowKey.length > 0) {
-              for (let i = rowKey.length - 1; i >= 0; i--) {
-                const subtotalKey = rowKey.slice(0, i);
-                const subtotalAggregator = this.safeGetAggregator(pivotData, subtotalKey, colKey);
+            if (opts.subtotals && actualRowKey.length > 0) {
+              for (let i = actualRowKey.length - 1; i >= 0; i--) {
+                const subtotalKey = actualRowKey.slice(0, i);
+                const subtotalAggregator = this.safeGetAggregator(pivotData, subtotalKey, actualColKey);
                 if (subtotalAggregator && subtotalAggregator.value() !== null && subtotalAggregator.value() !== undefined) {
                   aggregator = subtotalAggregator;
                   className += " pvtSubtotalVal";
@@ -781,9 +710,7 @@ function makeRenderer(opts = {}) {
                   className={className}
                   key={`pvtVal-${i}`}
                   style={valCss}
-                >
-                  -
-                </td>
+                />
               );
               return;
             }
@@ -791,27 +718,34 @@ function makeRenderer(opts = {}) {
           
           val = aggregator.value();
           const isSubtotalValue = className.includes("pvtSubtotalVal");
-          const formattedVal = (val === null || val === undefined || val === 0 || isSubtotalValue) ? '-' : aggregator.format(val);
+          
+          let formattedVal;
+          if (val === null || val === undefined || val === 0 || isSubtotalValue) {
+            formattedVal = '';
+          } else {
+            formattedVal = aggregator.format(val);
+          }
+          
+          const cellKey = flatKey(actualRowKey);
+          const colCellKey = flatKey(actualColKey);
           
           cells.push(
             <td
               className={className}
               key={`pvtVal-${i}`}
               style={valCss}
-              onClick={cellCallbacks[flatRowKey] && flatKey(colKey) in cellCallbacks[flatRowKey] ? cellCallbacks[flatRowKey][flatKey(colKey)] : null}
+              onClick={cellCallbacks[cellKey] && colCellKey in cellCallbacks[cellKey] ? cellCallbacks[cellKey][colCellKey] : null}
             >
               {formattedVal}
             </td>
           );
         } catch (error) {
-          console.error('Error rendering table cell:', error, {rowKey, colKey, i});
+          console.error('Error rendering table cell:', error, {rowKey: actualRowKey, colKey, i});
           cells.push(
             <td
               className="pvtVal"
               key={`pvtVal-${i}`}
-            >
-              -
-            </td>
+            />
           );
         }
       });
@@ -822,85 +756,61 @@ function makeRenderer(opts = {}) {
           let valCss = {};
           
           if (opts.heatmapMode && rowMapper.totalColor) {
-            const cellColor = rowMapper.totalColor(rowKey[0]);
+            const cellColor = rowMapper.totalColor(actualRowKey[0]);
             if (cellColor) {
               valCss = cellColor;
             }
           }
           
-          visibleColKeys.forEach(colKey => {
-            try {
-              const flatColKey = flatKey(colKey);
-              const isColParent = colKey.length < colAttrs.length;
-              const isColCollapsed = this.state.collapsedCols[flatColKey];
-              
-              if (!isColParent || isColCollapsed) {
-                const colAggregator = pivotData.getAggregator(rowKey, colKey);
-                if (colAggregator) {
-                  const colVal = colAggregator.value();
-                  if (colVal !== null && colVal !== undefined && !isNaN(colVal)) {
-                    // We can accumulate values here if needed
-                  }
-                }
-              }
-            } catch (e) {
-              console.warn('Error calculating column value for row total', rowKey, colKey, e);
-            }
-          });
-          
           let totalVal = 0;
-          let formattedTotal = '-';
+          let formattedTotal = '';
           
           if (isSubtotalRow) {
-            totalVal = this.calculateSubtotal(pivotData, rowKey, [], pivotSettings);
+            totalVal = this.calculateSubtotal(pivotData, actualRowKey, [], pivotSettings);
           } else {
-            const totalAggregator = this.safeGetAggregator(pivotData, rowKey, []);
-            if (totalAggregator && totalAggregator.value() !== null && totalAggregator.value() !== undefined) {
-              totalVal = totalAggregator.value();
-            } else {
-              visibleColKeys.forEach(colKey => {
-                const flatColKey = flatKey(colKey);
-                const isColParent = colKey.length < colAttrs.length;
-                const isColCollapsed = this.state.collapsedCols[flatColKey];
-                
-                if (!isColParent || isColCollapsed) {
-                  const agg = this.safeGetAggregator(pivotData, rowKey, colKey);
-                  if (agg) {
-                    const val = agg.value();
-                    if (val !== null && val !== undefined && !isNaN(val)) {
-                      totalVal += val;
-                    }
-                  }
+            visibleColKeys.forEach(colKey => {
+              const isSubtotalCol = colKey[colKey.length - 1] === '__subtotal__';
+              const actualColKey = isSubtotalCol ? colKey.slice(0, -1) : colKey;
+              
+              if (isSubtotalCol) {
+                return;
+              }
+              
+              const agg = this.safeGetAggregator(pivotData, actualRowKey, actualColKey);
+              if (agg) {
+                const val = agg.value();
+                if (val !== null && val !== undefined && !isNaN(val)) {
+                  totalVal += val;
                 }
-              });
-            }
+              }
+            });
           }
           
           if (totalVal !== 0 || isSubtotalRow) {
             const tempAggregator = this.safeGetAggregator(pivotData, [], []);
             const formatFunc = tempAggregator && tempAggregator.format ? tempAggregator.format : (x => x);
-            formattedTotal = totalVal === 0 ? '-' : formatFunc(totalVal);
+            formattedTotal = (totalVal === null || totalVal === undefined || totalVal === 0) ? '' : formatFunc(totalVal);
           }
+          
+          const cellKey = flatKey(actualRowKey);
           
           cells.push(
             <td
               className={className}
               key="total"
               style={valCss}
-              onClick={rowTotalCallbacks[flatRowKey]}
+              onClick={rowTotalCallbacks[cellKey]}
             >
               {formattedTotal}
             </td>
           );
         } catch (error) {
-          console.error('Error rendering row total:', error, {rowKey});
+          console.error('Error rendering row total:', error, {rowKey: actualRowKey});
           cells.push(
             <td
               className="pvtTotal"
               key="total"
-            >
-              -
-            </td>
+            />
           );
         }
       }
@@ -949,15 +859,16 @@ function makeRenderer(opts = {}) {
 
       visibleColKeys.forEach((colKey, i) => {
         try {
-          if (!colKey) {
-            console.warn('Invalid colKey in renderTotalsRow', colKey);
+          const isSubtotalCol = colKey[colKey.length - 1] === '__subtotal__';
+          const actualColKey = isSubtotalCol ? colKey.slice(0, -1) : colKey;
+          
+          if (!actualColKey) {
+            console.warn('Invalid colKey in renderTotalsRow', actualColKey);
             cells.push(
               <td
                 className="pvtTotal"
                 key={`total-${i}`}
-              >
-                -
-              </td>
+              />
             );
             return;
           }
@@ -965,64 +876,49 @@ function makeRenderer(opts = {}) {
           let colTotal = 0;
           const processedRows = new Set();
           
-          if (colKey.length < colAttrs.length) {
-            colTotal = this.calculateSubtotal(pivotData, [], colKey, pivotSettings);
+          if (isSubtotalCol) {
+            colTotal = this.calculateSubtotal(pivotData, [], actualColKey, pivotSettings);
           } else {
             visibleRowKeys.forEach(rowKey => {
-              const flatRowKey = flatKey(rowKey);
+              const isSubtotalRow = rowKey[rowKey.length - 1] === '__subtotal__';
               
-              if (processedRows.has(flatRowKey)) {
+              if (isSubtotalRow) {
                 return;
               }
               
-              processedRows.add(flatRowKey);
-              
-              const isCollapsed = this.state.collapsedRows[flatRowKey];
-              const isParent = rowKey.length < rowAttrs.length;
-              
-              try {
-                let value = 0;
-                
-                if (isCollapsed && isParent) {
-                  value = this.calculateSubtotal(pivotData, rowKey, colKey, pivotSettings);
-                } else if (rowKey.length === rowAttrs.length) {
-                  const agg = this.safeGetAggregator(pivotData, rowKey, colKey);
-                  if (agg) {
-                    const val = agg.value();
-                    if (val !== null && val !== undefined && !isNaN(val)) {
-                      value = val;
-                    }
-                  }
+              const actualRowKey = rowKey;
+              const agg = this.safeGetAggregator(pivotData, actualRowKey, actualColKey);
+              if (agg) {
+                const val = agg.value();
+                if (val !== null && val !== undefined && !isNaN(val)) {
+                  colTotal += val;
                 }
-                
-                if (value !== 0) {
-                  colTotal += value;
-                }
-              } catch (e) {
-                console.warn('Error calculating cell value', rowKey, colKey, e);
               }
             });
           }
           
           let valCss = {};
           if (opts.heatmapMode && colMapper.totalColor) {
-            const cellColor = colMapper.totalColor(colKey[0]);
+            const cellColor = colMapper.totalColor(actualColKey[0]);
             if (cellColor) {
               valCss = cellColor;
             }
           }
           
-          const tempAggregator = this.safeGetAggregator(pivotData, [], colKey);
+          const tempAggregator = this.safeGetAggregator(pivotData, [], actualColKey);
           const format = tempAggregator && tempAggregator.format ? tempAggregator.format : (x => x);
           
           cells.push(
             <td
-              className="pvtTotal"
+              className={`pvtTotal ${isSubtotalCol ? 'pvtSubtotal' : ''}`}
               key={`total-${i}`}
               style={valCss}
-              onClick={colTotalCallbacks[flatKey(colKey)]}
+              onClick={colTotalCallbacks[flatKey(actualColKey)]}
             >
-              {colTotal === 0 ? '-' : (format ? format(colTotal) : colTotal)}
+              {(colTotal === null || colTotal === undefined || colTotal === 0) 
+                ? '' 
+                : (format ? format(colTotal) : colTotal)
+              }
             </td>
           );
         } catch (error) {
@@ -1031,9 +927,7 @@ function makeRenderer(opts = {}) {
             <td
               className="pvtTotal"
               key={`total-${i}`}
-            >
-              -
-            </td>
+            />
           );
         }
       });
@@ -1057,14 +951,14 @@ function makeRenderer(opts = {}) {
           }
           
           if (!validValuesFound) {
-            const allRowKeys = pivotData.getRowKeys();
-            const allColKeys = pivotData.getColKeys();
-            
-            const leafRowKeys = allRowKeys.filter(rowKey => rowKey.length === rowAttrs.length);
-            const leafColKeys = allColKeys.filter(colKey => colKey.length === colAttrs.length);
-            
-            leafRowKeys.forEach(rowKey => {
-              leafColKeys.forEach(colKey => {
+            visibleRowKeys.forEach(rowKey => {
+              const isSubtotalRow = rowKey[rowKey.length - 1] === '__subtotal__';
+              if (isSubtotalRow) return;
+              
+              visibleColKeys.forEach(colKey => {
+                const isSubtotalCol = colKey[colKey.length - 1] === '__subtotal__';
+                if (isSubtotalCol) return;
+                
                 try {
                   const agg = this.safeGetAggregator(pivotData, rowKey, colKey);
                   if (agg) {
@@ -1091,7 +985,7 @@ function makeRenderer(opts = {}) {
               style={opts.heatmapMode && colMapper.grandTotalColor ? colMapper.grandTotalColor : {}}
               onClick={grandTotalCallback}
             >
-              {validValuesFound ? (grandTotal === 0 ? '-' : (format ? format(grandTotal) : grandTotal)) : '-'}
+              {(validValuesFound && grandTotal !== 0) ? (format ? format(grandTotal) : grandTotal) : ''}
             </td>
           );
         } catch (error) {
@@ -1100,9 +994,7 @@ function makeRenderer(opts = {}) {
             <td
               className="pvtGrandTotal"
               key="grandTotal"
-            >
-              -
-            </td>
+            />
           );
         }
       }
@@ -1111,54 +1003,117 @@ function makeRenderer(opts = {}) {
     }
 
     visibleKeys(keys, collapsed, numAttrs, subtotalDisplay) {
-      try {
-        if (!keys || !Array.isArray(keys)) {
-          console.error('Keys must be a valid array');
-          return [];
+      if (!opts.subtotals) {
+        return keys;
+      }
+      
+      const sortedKeys = keys.slice().sort((a, b) => {
+        const minLength = Math.min(a.length, b.length);
+        for (let i = 0; i < minLength; i++) {
+          const aStr = String(a[i]);
+          const bStr = String(b[i]);
+          const cmp = aStr.localeCompare(bStr);
+          if (cmp !== 0) return cmp;
         }
+        return a.length - b.length;
+      });
+      
+      const result = [];
+      const processedKeys = new Set();
+      
+      for (const key of sortedKeys) {
+        let parentCollapsed = false;
+        let deepestCollapsedParent = null;
         
-        if (!collapsed) {
-          collapsed = {};
-        }
-        
-        if (!subtotalDisplay) {
-          subtotalDisplay = { hideOnExpand: false };
-        }
-        
-        const result = [];
-        const addedKeys = new Set();
-        
-        for (let i = 0; i < keys.length; i++) {
-          const key = keys[i];
-          
-          for (let depth = 0; depth < key.length; depth++) {
-            const partialKey = key.slice(0, depth + 1);
-            const flatPartialKey = flatKey(partialKey);
-            
-            if (!addedKeys.has(flatPartialKey)) {
-              result.push(partialKey);
-              addedKeys.add(flatPartialKey);
-            }
-            
-            if (collapsed[flatPartialKey]) {
-              break;
-            }
-            
-            if (depth === key.length - 1) {
-              const flatFullKey = flatKey(key);
-              if (!addedKeys.has(flatFullKey)) {
-                result.push(key);
-                addedKeys.add(flatFullKey);
-              }
-            }
+        for (let i = 0; i < key.length - 1; i++) {
+          const parentKey = key.slice(0, i + 1);
+          const flatParentKey = flatKey(parentKey);
+          if (collapsed[flatParentKey]) {
+            parentCollapsed = true;
+            deepestCollapsedParent = parentKey;
+            break;
           }
         }
         
-        return result;
-      } catch (error) {
-        console.error('Error in visibleKeys method:', error);
-        return [];
+        if (parentCollapsed) {
+          const flatParentKey = flatKey(deepestCollapsedParent);
+          if (!processedKeys.has(flatParentKey)) {
+            result.push(deepestCollapsedParent);
+            processedKeys.add(flatParentKey);
+          }
+        } else {
+          const flatKey_ = flatKey(key);
+          if (!processedKeys.has(flatKey_)) {
+            result.push(key);
+            processedKeys.add(flatKey_);
+          }
+        }
       }
+      
+      const finalResult = [];
+      const addedSubtotals = new Set();
+      
+      const parentGroups = new Map();
+      
+      for (const key of result) {
+        for (let level = 1; level < key.length; level++) {
+          const parentKey = key.slice(0, level);
+          const parentKeyStr = flatKey(parentKey);
+          
+          if (!parentGroups.has(parentKeyStr)) {
+            parentGroups.set(parentKeyStr, {
+              key: parentKey,
+              level: level,
+              lastChildIndex: -1
+            });
+          }
+        }
+      }
+      
+      for (let i = 0; i < result.length; i++) {
+        const key = result[i];
+        
+        for (let level = 1; level < key.length; level++) {
+          const parentKey = key.slice(0, level);
+          const parentKeyStr = flatKey(parentKey);
+          const parentGroup = parentGroups.get(parentKeyStr);
+          
+          if (parentGroup) {
+            parentGroup.lastChildIndex = Math.max(parentGroup.lastChildIndex, i);
+          }
+        }
+      }
+      
+      for (let i = 0; i < result.length; i++) {
+        const key = result[i];
+        finalResult.push(key);
+
+        const subtotalsToAdd = [];
+        
+        for (let level = key.length - 1; level >= 1; level--) {
+          const parentKey = key.slice(0, level);
+          const parentKeyStr = flatKey(parentKey);
+          const parentGroup = parentGroups.get(parentKeyStr);
+
+          if (collapsed[parentKeyStr]) {
+            continue;
+          }
+          
+          if (parentGroup && parentGroup.lastChildIndex === i) {
+            const subtotalKey = [...parentKey, '__subtotal__'];
+            const subtotalKeyStr = flatKey(subtotalKey);
+            
+            if (!addedSubtotals.has(subtotalKeyStr)) {
+              subtotalsToAdd.push(subtotalKey);
+              addedSubtotals.add(subtotalKeyStr);
+            }
+          }
+        }
+
+        finalResult.push(...subtotalsToAdd);
+      }
+      
+      return finalResult;
     }
 
     getSubtotal(rowKey, colKey, pivotSettings) {
@@ -1258,32 +1213,62 @@ function makeRenderer(opts = {}) {
         colKeys,
         rowTotals,
         colTotals,
+        rowSubtotalDisplay,
+        colSubtotalDisplay,
       } = pivotSettings;
 
       const renderedLabels = {};
       
-      const visibleRowKeys = this.visibleKeys(
-        rowKeys,
-        this.state.collapsedRows,
-        rowAttrs.length,
-        pivotSettings.rowSubtotalDisplay
+      const visibleRowKeys = opts.subtotals
+        ? this.visibleKeys(
+            rowKeys,
+            this.state.collapsedRows,
+            rowAttrs.length,
+            rowSubtotalDisplay
+          )
+        : rowKeys;
+      const visibleColKeys = opts.subtotals
+        ? this.visibleKeys(
+            colKeys,
+            this.state.collapsedCols,
+            colAttrs.length,
+            colSubtotalDisplay
+          )
+        : colKeys;
+      
+      const finalPivotSettings = Object.assign(
+        {
+          visibleRowKeys,
+          maxRowVisible: Math.max(...visibleRowKeys.map(k => k.length)),
+          visibleColKeys,
+          maxColVisible: Math.max(...visibleColKeys.map(k => k.length)),
+          rowAttrSpans: this.calcAttrSpans(visibleRowKeys, rowAttrs.length),
+          colAttrSpans: this.calcAttrSpans(visibleColKeys, colAttrs.length),
+        },
+        pivotSettings
       );
 
       const rowspans = {};
       visibleRowKeys.forEach((rowKey, rowIdx) => {
-        for (let level = 0; level < rowKey.length; level++) {
+        const isSubtotalRow = rowKey[rowKey.length - 1] === '__subtotal__';
+        const actualRowKey = isSubtotalRow ? rowKey.slice(0, -1) : rowKey;
+        
+        for (let level = 0; level < actualRowKey.length; level++) {
           const cellKey = `${rowIdx}-${level}`;
-          const value = rowKey[level];
+          const value = actualRowKey[level];
           
           let span = 1;
           let j = rowIdx + 1;
           while (j < visibleRowKeys.length) {
             const nextKey = visibleRowKeys[j];
-            if (level >= nextKey.length) break;
+            const isNextSubtotal = nextKey[nextKey.length - 1] === '__subtotal__';
+            const actualNextKey = isNextSubtotal ? nextKey.slice(0, -1) : nextKey;
+            
+            if (level >= actualNextKey.length) break;
             
             let matches = true;
             for (let l = 0; l <= level; l++) {
-              if (l >= nextKey.length || nextKey[l] !== rowKey[l]) {
+              if (l >= actualNextKey.length || actualNextKey[l] !== actualRowKey[l]) {
                 matches = false;
                 break;
               }
@@ -1301,81 +1286,87 @@ function makeRenderer(opts = {}) {
       const renderedRows = visibleRowKeys.map((rowKey, i) => {
         const rowCells = [];
         
-        // Check if this is a subtotal row (parent row with children)
-        const isSubtotalRow = rowKey.length < rowAttrs.length && opts.subtotals;
+        const isSubtotalRow = rowKey[rowKey.length - 1] === '__subtotal__';
+        const actualRowKey = isSubtotalRow ? rowKey.slice(0, -1) : rowKey;
         
-        for (let level = 0; level < rowKey.length; level++) {
-          const labelKey = `${rowKey.slice(0, level+1).join('|')}`;
-          
-          if (!renderedLabels[labelKey]) {
-            renderedLabels[labelKey] = true;
+        if (isSubtotalRow) {
+          rowCells.push(
+            <th
+              key="subtotalLabel"
+              className="pvtRowLabel pvtSubtotal"
+              colSpan={rowAttrs.length - actualRowKey.length + 1}
+            />
+          );
+        } else {
+          for (let level = 0; level < actualRowKey.length; level++) {
+            const labelKey = `${actualRowKey.slice(0, level+1).join('|')}`;
             
-            const cellKey = `${i}-${level}`;
-            const rowspan = rowspans[cellKey] || 1;
-            
-            const flatRowKey = flatKey(rowKey.slice(0, level+1));
-            const isCollapsed = this.state.collapsedRows[flatRowKey];
-            
-            let className = 'pvtRowLabel';
-            if (isSubtotalRow) {
-              className += ' pvtSubtotal';
-            }
-            
-            let icon = null;
-            
-            if (level + 1 < rowAttrs.length) {
-              if (isCollapsed) {
-                className += ' collapsed';
-                icon = pivotSettings.arrowCollapsed;
-              } else {
-                className += ' expanded';
-                icon = pivotSettings.arrowExpanded;
+            if (!renderedLabels[labelKey]) {
+              renderedLabels[labelKey] = true;
+              
+              const cellKey = `${i}-${level}`;
+              const rowspan = rowspans[cellKey] || 1;
+              
+              const flatRowKey = flatKey(actualRowKey.slice(0, level+1));
+              const isCollapsed = this.state.collapsedRows[flatRowKey];
+              
+              let className = 'pvtRowLabel';
+              
+              let icon = null;
+              
+              if (level + 1 < rowAttrs.length) {
+                if (isCollapsed) {
+                  className += ' collapsed';
+                  icon = pivotSettings.arrowCollapsed;
+                } else {
+                  className += ' expanded';
+                  icon = pivotSettings.arrowExpanded;
+                }
+                rowCells.push(
+                  <th
+                    key={`rowLabel-${level}`}
+                    className={className}
+                    rowSpan={rowspan}
+                    onClick={this.toggleRowKey(flatRowKey)}
+                    style={{cursor: 'pointer'}}
+                  >
+                    {icon && <span className="pvtAttr" style={{marginRight: '6px'}}>{icon}</span>}
+                    <span>{actualRowKey[level]}</span>
+                  </th>
+                );
+                continue;
               }
-              // Add pointer cursor for collapsible row labels
+
+              const isLeafLevel = (level === actualRowKey.length - 1) && (actualRowKey.length === rowAttrs.length);
+              const leafColspan = isLeafLevel ? 2 : 1;
+              
               rowCells.push(
                 <th
                   key={`rowLabel-${level}`}
                   className={className}
                   rowSpan={rowspan}
+                  colSpan={leafColspan}
                   onClick={this.toggleRowKey(flatRowKey)}
-                  style={{cursor: 'pointer'}}
                 >
-                  {icon && <span className="pvtAttr" style={{marginRight: '6px'}}>{icon}</span>}
-                  <span>{rowKey[level]}</span>
+                  {icon && <span className="pvtAttr">{icon}</span>}
+                  <span>{actualRowKey[level]}</span>
                 </th>
               );
-              continue;
             }
-            
+          }
+          
+          if (actualRowKey.length < rowAttrs.length) {
             rowCells.push(
               <th
-                key={`rowLabel-${level}`}
-                className={className}
-                rowSpan={rowspan}
-                onClick={this.toggleRowKey(flatRowKey)}
-              >
-                {icon && <span className="pvtAttr">{icon}</span>}
-                <span>{rowKey[level]}</span>
-              </th>
+                key="padding"
+                className="pvtRowLabel"
+                colSpan={rowAttrs.length - actualRowKey.length + 1}
+              />
             );
           }
         }
         
-        if (rowKey.length < rowAttrs.length) {
-          rowCells.push(
-            <th
-              key="padding"
-              className={`pvtRowLabel ${opts.subtotals ? 'pvtSubtotal' : ''}`}
-              colSpan={rowAttrs.length - rowKey.length}
-            />
-          );
-        }
-        
-        rowCells.push(
-          <th key="separator" className={`pvtTotalLabel ${isSubtotalRow && opts.subtotals ? 'pvtSubtotal' : ''}`} />
-        );
-        
-        const dataCells = this.renderTableRow(rowKey, i, pivotSettings);
+        const dataCells = this.renderTableRow(rowKey, i, finalPivotSettings);
         
         return (
           <tr key={`row-${i}`} className={isSubtotalRow && opts.subtotals ? 'pvtSubtotalRow' : ''}>
@@ -1388,7 +1379,7 @@ function makeRenderer(opts = {}) {
       const colAttrsHeaders = colAttrs.map((attrName, i) => {
         return (
           <tr key={`colAttr-${i}`}>
-            {this.renderColHeaderRow(attrName, i, pivotSettings)}
+            {this.renderColHeaderRow(attrName, i, finalPivotSettings)}
           </tr>
         );
       });
@@ -1396,14 +1387,14 @@ function makeRenderer(opts = {}) {
       let rowAttrsHeader = null;
       if (rowAttrs.length > 0) {
         rowAttrsHeader = (
-          <tr key="rowAttr-0">{this.renderRowHeaderRow(pivotSettings)}</tr>
+          <tr key="rowAttr-0">{this.renderRowHeaderRow(finalPivotSettings)}</tr>
         );
       }
 
       let totalHeader = null;
       if (rowTotals) {
         totalHeader = (
-          <tr key="total">{this.renderTotalsRow(pivotSettings)}</tr>
+          <tr key="total">{this.renderTotalsRow(finalPivotSettings)}</tr>
         );
       }
 
