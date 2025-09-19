@@ -557,8 +557,14 @@ function makeRenderer(opts = {}) {
           let headerText = actualColKey[attrIdx];
           let headerClass = 'pvtColLabel';
           
+          // Check if this is a collapsed parent (acting as subtotal)
+          const isCollapsedParent = this.state.collapsedCols[flatColKey] && actualColKey.length < colAttrs.length;
+          
           if (isSubtotalCol) {
             headerText = `${headerText} (Subtotal)`;
+            headerClass += ' pvtSubtotal';
+          } else if (isCollapsedParent) {
+            // Show collapsed parents with subtotal styling since they represent aggregated values
             headerClass += ' pvtSubtotal';
           }
           
@@ -581,9 +587,12 @@ function makeRenderer(opts = {}) {
           );
         } else if (attrIdx === actualColKey.length) {
           const rowSpan = colAttrs.length - actualColKey.length + rowIncrSpan;
+          const flatColKey = flatKey(actualColKey);
+          const isCollapsedParent = this.state.collapsedCols[flatColKey] && actualColKey.length < colAttrs.length;
+          
           attrValueCells.push(
             <th
-              className={`pvtColLabel ${isSubtotalCol ? 'pvtSubtotal' : ''}`}
+              className={`pvtColLabel ${isSubtotalCol || isCollapsedParent ? 'pvtSubtotal' : ''}`}
               key={'colKeyBuffer-' + flatKey(actualColKey) + (isSubtotalCol ? '-subtotal' : '')}
               colSpan={colSpan}
               rowSpan={rowSpan}
@@ -924,7 +933,12 @@ function makeRenderer(opts = {}) {
           let colTotal = 0;
           const processedRows = new Set();
           
-          if (isSubtotalCol) {
+          // Check if this is a collapsed parent (appears as regular key but should use subtotal logic)
+          const flatColKey = flatKey(actualColKey);
+          const isCollapsedParent = this.state.collapsedCols[flatColKey] && actualColKey.length < colAttrs.length;
+          
+          if (isSubtotalCol || isCollapsedParent) {
+            // Use subtotal calculation for explicit subtotal columns AND collapsed parents
             colTotal = this.calculateSubtotal(pivotData, [], actualColKey, pivotSettings);
           } else {
             // Calculate column total using all row keys from pivotData
@@ -940,7 +954,7 @@ function makeRenderer(opts = {}) {
           }
           
           let valCss = {};
-          if (isSubtotalCol) {
+          if (isSubtotalCol || isCollapsedParent) {
             if (opts.heatmapMode && colMapper.bgColorFromSubtotalValue) {
               let cellColor;
               if (opts.heatmapMode === 'full') {
@@ -977,7 +991,7 @@ function makeRenderer(opts = {}) {
           
           cells.push(
             <td
-              className={`pvtTotal ${isSubtotalCol ? 'pvtSubtotal' : ''}`}
+              className={`pvtTotal ${isSubtotalCol || isCollapsedParent ? 'pvtSubtotal' : ''}`}
               key={`total-${i}`}
               style={valCss}
               onClick={colTotalCallbacks[flatKey(actualColKey)]}
@@ -1156,7 +1170,7 @@ function makeRenderer(opts = {}) {
           const parentKeyStr = flatKey(parentKey);
           const parentGroup = parentGroups.get(parentKeyStr);
 
-          // Skip subtotals for collapsed parents (their subtotals are shown as regular cells)
+          // For collapsed parents, don't add explicit subtotal rows since the parent acts as the subtotal
           if (collapsed[parentKeyStr]) {
             continue;
           }
