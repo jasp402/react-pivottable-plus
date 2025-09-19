@@ -817,16 +817,9 @@ function makeRenderer(opts = {}) {
               }
             }
             
-            // Calculate total by summing individual cell values
-            visibleColKeys.forEach(colKey => {
-              const isSubtotalCol = colKey[colKey.length - 1] === '__subtotal__';
-              const actualColKey = isSubtotalCol ? colKey.slice(0, -1) : colKey;
-              
-              if (isSubtotalCol) {
-                return;
-              }
-              
-              const agg = this.safeGetAggregator(pivotData, actualRowKey, actualColKey);
+            // Calculate total by summing individual cell values from all column keys
+            pivotData.getColKeys().forEach(colKey => {
+              const agg = this.safeGetAggregator(pivotData, actualRowKey, colKey);
               if (agg) {
                 const val = agg.value();
                 if (val !== null && val !== undefined && !isNaN(val)) {
@@ -934,15 +927,9 @@ function makeRenderer(opts = {}) {
           if (isSubtotalCol) {
             colTotal = this.calculateSubtotal(pivotData, [], actualColKey, pivotSettings);
           } else {
-            visibleRowKeys.forEach(rowKey => {
-              const isSubtotalRow = rowKey[rowKey.length - 1] === '__subtotal__';
-              
-              if (isSubtotalRow) {
-                return;
-              }
-              
-              const actualRowKey = rowKey;
-              const agg = this.safeGetAggregator(pivotData, actualRowKey, actualColKey);
+            // Calculate column total using all row keys from pivotData
+            pivotData.getRowKeys().forEach(rowKey => {
+              const agg = this.safeGetAggregator(pivotData, rowKey, actualColKey);
               if (agg) {
                 const val = agg.value();
                 if (val !== null && val !== undefined && !isNaN(val)) {
@@ -1028,14 +1015,9 @@ function makeRenderer(opts = {}) {
           }
           
           if (!validValuesFound) {
-            visibleRowKeys.forEach(rowKey => {
-              const isSubtotalRow = rowKey[rowKey.length - 1] === '__subtotal__';
-              if (isSubtotalRow) return;
-              
-              visibleColKeys.forEach(colKey => {
-                const isSubtotalCol = colKey[colKey.length - 1] === '__subtotal__';
-                if (isSubtotalCol) return;
-                
+            // Calculate grand total using all keys from pivotData
+            pivotData.getRowKeys().forEach(rowKey => {
+              pivotData.getColKeys().forEach(colKey => {
                 try {
                   const agg = this.safeGetAggregator(pivotData, rowKey, colKey);
                   if (agg) {
