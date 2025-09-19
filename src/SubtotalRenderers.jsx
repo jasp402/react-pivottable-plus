@@ -422,6 +422,14 @@ function makeRenderer(opts = {}) {
           
           colMapper.bgColorFromRowColKey = (rowKey, colKey) =>
             valueCellColors[`${flatKey(rowKey)}_${flatKey(colKey)}`];
+          
+          // Add subtotal value to color mapping function
+          colMapper.bgColorFromSubtotalValue = (value) => {
+            if (value !== null && value !== undefined && !isNaN(value)) {
+              return colorScale(value);
+            }
+            return null;
+          };
         } 
         else if (opts.heatmapMode === 'row') {
           // Row heatmap: Compare values within each row
@@ -442,6 +450,17 @@ function makeRenderer(opts = {}) {
           
           colMapper.bgColorFromRowColKey = (rowKey, colKey) =>
             valueCellColors[`${flatKey(rowKey)}_${flatKey(colKey)}`];
+          
+          // Add subtotal value to color mapping function for row mode
+          colMapper.bgColorFromSubtotalValue = (value, rowKey) => {
+            if (value !== null && value !== undefined && !isNaN(value)) {
+              const flatRow = flatKey(rowKey);
+              if (rowColorScales[flatRow]) {
+                return rowColorScales[flatRow](value);
+              }
+            }
+            return null;
+          };
         } 
         else if (opts.heatmapMode === 'col') {
           // Column heatmap: Compare values within each column
@@ -462,6 +481,17 @@ function makeRenderer(opts = {}) {
           
           colMapper.bgColorFromRowColKey = (rowKey, colKey) =>
             valueCellColors[`${flatKey(rowKey)}_${flatKey(colKey)}`];
+          
+          // Add subtotal value to color mapping function for column mode
+          colMapper.bgColorFromSubtotalValue = (value, rowKey, colKey) => {
+            if (value !== null && value !== undefined && !isNaN(value)) {
+              const flatCol = flatKey(colKey);
+              if (colColorScales[flatCol]) {
+                return colColorScales[flatCol](value);
+              }
+            }
+            return null;
+          };
         }
       }
       return {colMapper, rowMapper};
@@ -655,8 +685,16 @@ function makeRenderer(opts = {}) {
               format: tempAggregator ? tempAggregator.format : (x => x)
             };
             
-            if (opts.heatmapMode && rowMapper.totalColor) {
-              const cellColor = rowMapper.totalColor(actualRowKey[0]);
+            if (opts.heatmapMode && colMapper.bgColorFromSubtotalValue) {
+              let cellColor;
+              if (opts.heatmapMode === 'full') {
+                cellColor = colMapper.bgColorFromSubtotalValue(value);
+              } else if (opts.heatmapMode === 'row') {
+                cellColor = colMapper.bgColorFromSubtotalValue(value, actualRowKey);
+              } else if (opts.heatmapMode === 'col') {
+                cellColor = colMapper.bgColorFromSubtotalValue(value, actualRowKey, actualColKey);
+              }
+              
               if (cellColor) {
                 valCss = cellColor;
               }
@@ -672,8 +710,16 @@ function makeRenderer(opts = {}) {
               format: tempAggregator ? tempAggregator.format : (x => x)
             };
             
-            if (opts.heatmapMode && colMapper.totalColor) {
-              const cellColor = colMapper.totalColor(actualColKey[0]);
+            if (opts.heatmapMode && colMapper.bgColorFromSubtotalValue) {
+              let cellColor;
+              if (opts.heatmapMode === 'full') {
+                cellColor = colMapper.bgColorFromSubtotalValue(value);
+              } else if (opts.heatmapMode === 'row') {
+                cellColor = colMapper.bgColorFromSubtotalValue(value, actualRowKey);
+              } else if (opts.heatmapMode === 'col') {
+                cellColor = colMapper.bgColorFromSubtotalValue(value, actualRowKey, actualColKey);
+              }
+              
               if (cellColor) {
                 valCss = cellColor;
               }
@@ -755,19 +801,33 @@ function makeRenderer(opts = {}) {
           const className = isSubtotalRow ? "pvtTotal pvtSubtotal" : "pvtTotal";
           let valCss = {};
           
-          if (opts.heatmapMode && rowMapper.totalColor) {
-            const cellColor = rowMapper.totalColor(actualRowKey[0]);
-            if (cellColor) {
-              valCss = cellColor;
-            }
-          }
-          
           let totalVal = 0;
           let formattedTotal = '';
           
           if (isSubtotalRow) {
             totalVal = this.calculateSubtotal(pivotData, actualRowKey, [], pivotSettings);
+            
+            if (opts.heatmapMode && colMapper.bgColorFromSubtotalValue) {
+              let cellColor;
+              if (opts.heatmapMode === 'full') {
+                cellColor = colMapper.bgColorFromSubtotalValue(totalVal);
+              } else if (opts.heatmapMode === 'row') {
+                cellColor = colMapper.bgColorFromSubtotalValue(totalVal, actualRowKey);
+              } else if (opts.heatmapMode === 'col') {
+                cellColor = colMapper.bgColorFromSubtotalValue(totalVal, actualRowKey, []);
+              }
+              
+              if (cellColor) {
+                valCss = cellColor;
+              }
+            }
           } else {
+            if (opts.heatmapMode && rowMapper.totalColor) {
+              const cellColor = rowMapper.totalColor(actualRowKey[0]);
+              if (cellColor) {
+                valCss = cellColor;
+              }
+            }
             visibleColKeys.forEach(colKey => {
               const isSubtotalCol = colKey[colKey.length - 1] === '__subtotal__';
               const actualColKey = isSubtotalCol ? colKey.slice(0, -1) : colKey;
@@ -898,16 +958,30 @@ function makeRenderer(opts = {}) {
           }
           
           let valCss = {};
-          if (opts.heatmapMode && colMapper.totalColor) {
+          if (isSubtotalCol) {
+            if (opts.heatmapMode && colMapper.bgColorFromSubtotalValue) {
+              let cellColor;
+              if (opts.heatmapMode === 'full') {
+                cellColor = colMapper.bgColorFromSubtotalValue(colTotal);
+              } else if (opts.heatmapMode === 'row') {
+                cellColor = colMapper.bgColorFromSubtotalValue(colTotal, []);
+              } else if (opts.heatmapMode === 'col') {
+                cellColor = colMapper.bgColorFromSubtotalValue(colTotal, [], actualColKey);
+              }
+              
+              if (cellColor) {
+                valCss = cellColor;
+              }
+            }
+          } else if (opts.heatmapMode && colMapper.totalColor) {
             const cellColor = colMapper.totalColor(actualColKey[0]);
             if (cellColor) {
               valCss = cellColor;
             }
           }
-          
-          const tempAggregator = this.safeGetAggregator(pivotData, [], actualColKey);
+
+          const tempAggregator = this.safeGetAggregator(pivotData, [], []);
           const format = tempAggregator && tempAggregator.format ? tempAggregator.format : (x => x);
-          
           cells.push(
             <td
               className={`pvtTotal ${isSubtotalCol ? 'pvtSubtotal' : ''}`}

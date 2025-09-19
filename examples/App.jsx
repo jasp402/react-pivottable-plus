@@ -46,8 +46,8 @@ export default class App extends React.Component {
             filename: 'Sample Dataset: Tips',
             pivotState: {
                 data: tips,
-                cols: ['Day of Week', "Party Size"],
-                rows: ['Payer Gender', "Meal"],
+                rows: ['Day of Week', 'Party Size'],
+                cols: ['Payer Gender', 'Meal'],
                 aggregatorName: 'Sum',
                 vals: ['Tip'],
                 rendererName: 'Table With Subtotal',
