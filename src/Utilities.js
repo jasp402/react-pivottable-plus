@@ -554,7 +554,6 @@ class PivotData {
     this.allTotal = this.aggregator(this, [], []);
     this.sorted = false;
 
-    // iterate through input, accumulating data for cells
     PivotData.forEachRecord(
       this.props.data,
       this.props.derivedAttributes,
@@ -728,7 +727,7 @@ class PivotData {
     this.getRowKeys().forEach((rowKey, i) => {
       callback([rowKey, null], i);
     });
-    
+
     // Process column totals
     this.getColKeys().forEach((colKey, i) => {
       callback([null, colKey], i);
