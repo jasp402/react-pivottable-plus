@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import {PivotData} from './Utilities';
 
 // helper function for setting row/col-span in pivotTableRenderer
-const spanSize = function(arr, i, j) {
+const spanSize = function(arr, i, j, no_loop = false) {
   let x;
   if (i !== 0) {
     let asc, end;
@@ -26,7 +26,7 @@ const spanSize = function(arr, i, j) {
     let asc1, end1;
     let stop = false;
     for (
-      x = 0, end1 = j, asc1 = end1 >= 0;
+      x = no_loop ? j : 0, end1 = j, asc1 = end1 >= 0;
       asc1 ? x <= end1 : x >= end1;
       asc1 ? x++ : x--
     ) {
@@ -52,6 +52,12 @@ function redColorScaleGenerator(values) {
   };
 }
 
+const flatKey = arr => arr.join(String.fromCharCode(0));
+const has = (set, arr) => arr.every(set.has, set);
+const add = (set, arr) => (arr.forEach(set.add, set) || set);
+const remove = (set, arr) => (arr.forEach(set.delete, set) || set);
+const toggle = (set, arr) => (has(set, arr) ? remove : add)(set, arr);
+
 function makeRenderer(opts = {}) {
   class TableRenderer extends React.PureComponent {
     render() {
@@ -59,9 +65,24 @@ function makeRenderer(opts = {}) {
       const id = pivotData.props.id;
       const colAttrs = pivotData.props.cols;
       const rowAttrs = pivotData.props.rows;
-      const rowKeys = pivotData.getRowKeys();
-      const colKeys = pivotData.getColKeys();
+      let rowKeys = pivotData.getRowKeys(true);
+      let colKeys = pivotData.getColKeys(true);
       const grandTotalAggregator = pivotData.getAggregator([], []);
+
+      const grouping = pivotData.props.grouping;
+      const compactRows = grouping && this.props.compactRows;
+      // speacial case for spanSize counting (no_loop)
+      const specialCase = grouping && !this.props.rowGroupBefore;
+      const folded = (this.state || {}).folded || new Set();
+      const isFolded = keys => has(folded, keys.map(flatKey));
+      const fold = keys => this.setState({folded: toggle(new Set(folded), keys.map(flatKey))});
+
+      if(grouping){
+        for (const key of folded) {
+          colKeys = colKeys.filter(colKey => !flatKey(colKey).startsWith(key + String.fromCharCode(0)));
+          rowKeys = rowKeys.filter(rowKey => !flatKey(rowKey).startsWith(key + String.fromCharCode(0)));
+        }
+      }
 
       let valueCellColors = () => {};
       let rowTotalColors = () => {};
@@ -133,16 +154,27 @@ function makeRenderer(opts = {}) {
             }
           : null;
 
+      const rbClass = grouping? this.props.rowGroupBefore ? "rowGroupBefore" : "rowGroupAfter" : "";
+      const cbClass = grouping? this.props.colGroupBefore ? "colGroupBefore" : "colGroupAfter" : "";
+      const clickClass = (pred, closed) => pred? " pvtClickable" + (closed? " closed": "") : "";
       return (
+<<<<<<< HEAD
         <table id={id} className="pvtTable">
+=======
+        <table className={`pvtTable ${rbClass} ${cbClass}`}>
+>>>>>>> pr-131
           <thead>
             {colAttrs.map(function(c, j) {
+              const clickable = grouping && colAttrs.length > j + 1;
+              const levelKeys = colKeys.filter(x => x.length === j+1);
               return (
                 <tr key={`colAttr${j}`}>
                   {j === 0 && rowAttrs.length !== 0 && (
                     <th colSpan={rowAttrs.length} rowSpan={colAttrs.length} />
                   )}
-                  <th className="pvtAxisLabel">{c}</th>
+                  <th className={"pvtAxisLabel" + clickClass(clickable, isFolded(levelKeys))}
+                   onClick={clickable? _ => fold(levelKeys): null}
+                  >{c}</th>
                   {colKeys.map(function(colKey, i) {
                     const x = spanSize(colKeys, i, j);
                     if (x === -1) {
@@ -150,7 +182,7 @@ function makeRenderer(opts = {}) {
                     }
                     return (
                       <th
-                        className="pvtColLabel"
+                        className={"pvtColLabel" + clickClass(clickable && colKey[j], isFolded([colKey.slice(0, j + 1)]))}
                         key={`colKey${i}`}
                         colSpan={x}
                         rowSpan={
@@ -158,6 +190,7 @@ function makeRenderer(opts = {}) {
                             ? 2
                             : 1
                         }
+                        onClick={clickable && colKey[j] ? _ => fold([colKey.slice(0, j + 1)]) : null}
                       >
                         {colKey[j]}
                       </th>
@@ -181,8 +214,12 @@ function makeRenderer(opts = {}) {
             {rowAttrs.length !== 0 && (
               <tr>
                 {rowAttrs.map(function(r, i) {
+                  const clickable = grouping && rowAttrs.length > i + 1;
+                  const levelKeys = rowKeys.filter(x => x.length === i+1);
                   return (
-                    <th className="pvtAxisLabel" key={`rowAttr${i}`}>
+                    <th className={"pvtAxisLabel" + clickClass(clickable, isFolded(levelKeys))}
+                      onClick={clickable? _ => fold(levelKeys): null}
+                      key={`rowAttr${i}`}>
                       {r}
                     </th>
                   );
@@ -197,33 +234,48 @@ function makeRenderer(opts = {}) {
           <tbody>
             {rowKeys.map(function(rowKey, i) {
               const totalAggregator = pivotData.getAggregator(rowKey, []);
+              const rowGap = rowAttrs.length - rowKey.length;
               return (
-                <tr key={`rowKeyRow${i}`}>
+                <tr key={`rowKeyRow${i}`}
+                  className={rowGap ? "pvtLevel" + rowGap : "pvtData"}>
                   {rowKey.map(function(txt, j) {
-                    const x = spanSize(rowKeys, i, j);
+                    if (compactRows && j < rowKey.length - 1) {
+                      return null;
+                    }
+                    const clickable =  grouping && rowAttrs.length > j + 1;
+                    const x = compactRows ? 1 : spanSize(rowKeys, i, j, specialCase);
                     if (x === -1) {
                       return null;
                     }
                     return (
                       <th
                         key={`rowKeyLabel${i}-${j}`}
-                        className="pvtRowLabel"
+                        className={"pvtRowLabel" + clickClass(clickable && rowKey[j], isFolded([rowKey.slice(0, j + 1)]))}
                         rowSpan={x}
                         colSpan={
+                          compactRows ?
+                          rowAttrs.length + 1 :
                           j === rowAttrs.length - 1 && colAttrs.length !== 0
                             ? 2
                             : 1
                         }
+                        style={{paddingLeft: compactRows ? `calc(var(--pvt-row-padding, 5px) + ${j} * var(--pvt-row-indent, 20px))` : null}}
+                        onClick={clickable && rowKey[j] ? _ => fold([rowKey.slice(0, j + 1)]) : null}
                       >
                         {txt}
                       </th>
                     );
                   })}
+                  {!compactRows && rowGap
+                    ? <th className="pvtRowLabel" colSpan={rowGap + 1}>{"Total (" + rowKey[rowKey.length - 1] + ")"}</th>
+                    : null
+                  }
                   {colKeys.map(function(colKey, j) {
                     const aggregator = pivotData.getAggregator(rowKey, colKey);
+                    const colGap = colAttrs.length - colKey.length;
                     return (
                       <td
-                        className="pvtVal"
+                        className={"pvtVal" + (colGap ? " pvtLevel" + colGap : "")}
                         key={`pvtVal${i}-${j}`}
                         onClick={
                           getClickHandler &&
@@ -263,9 +315,10 @@ function makeRenderer(opts = {}) {
 
               {colKeys.map(function(colKey, i) {
                 const totalAggregator = pivotData.getAggregator([], colKey);
+                const colGap = colAttrs.length - colKey.length;
                 return (
                   <td
-                    className="pvtTotal"
+                    className={"pvtTotal" + (colGap ? " pvtLevel" + colGap : "")}
                     key={`total${i}`}
                     onClick={
                       getClickHandler &&
@@ -300,6 +353,8 @@ function makeRenderer(opts = {}) {
   TableRenderer.defaultProps.tableOptions = {};
   TableRenderer.propTypes.tableColorScaleGenerator = PropTypes.func;
   TableRenderer.propTypes.tableOptions = PropTypes.object;
+  TableRenderer.defaultProps.compactRows = true;
+  TableRenderer.propTypes.compactRows = PropTypes.bool;
   return TableRenderer;
 }
 
