@@ -158,11 +158,7 @@ function makeRenderer(opts = {}) {
       const cbClass = grouping? this.props.colGroupBefore ? "colGroupBefore" : "colGroupAfter" : "";
       const clickClass = (pred, closed) => pred? " pvtClickable" + (closed? " closed": "") : "";
       return (
-<<<<<<< HEAD
-        <table id={id} className="pvtTable">
-=======
-        <table className={`pvtTable ${rbClass} ${cbClass}`}>
->>>>>>> pr-131
+        <table id={id} className={`pvtTable ${rbClass} ${cbClass}`}>
           <thead>
             {colAttrs.map(function(c, j) {
               const clickable = grouping && colAttrs.length > j + 1;

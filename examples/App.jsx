@@ -84,20 +84,11 @@ export default class App extends React.Component {
             filename: 'Sample Dataset: Tips',
             pivotState: {
                 data: tips,
-<<<<<<< HEAD
-                rows: ['Payer Gender', "Meal"],
-                cols: ["Payer Smoker", 'Party Size',],
-                // aggregatorName: 'Sum over Sum',
-                vals: ['Tip', 'Total Bill'],
-                // rendererName: 'Grouped Column Chart',
-                rendererName: 'Table',
-=======
                 rows: ['Day of Week', 'Party Size'],
                 cols: ['Payer Gender', 'Meal'],
                 aggregatorName: 'Sum',
                 vals: ['Tip'],
                 rendererName: 'Table With Subtotal',
->>>>>>> pr-182
                 sorters: {
                     Meal: sortAs(['Lunch', 'Dinner']),
                     'Day of Week': sortAs([
