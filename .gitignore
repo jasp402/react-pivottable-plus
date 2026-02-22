@@ -16,3 +16,6 @@ package-lock.json
 /Utilities.js.map
 /__tests__/*
 /pivottable.css
+
+# Reglas de Gemini CLI
+GEMINI.md

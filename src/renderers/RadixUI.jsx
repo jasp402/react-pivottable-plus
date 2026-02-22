@@ -42,15 +42,15 @@ export function RadixUI(props) {
     const renderAttribute = (attr) => (
         <div
             key={attr}
-            className="flex items-center gap-3 bg-white hover:border-blue-300 border border-slate-200 rounded-xl px-4 py-2.5 text-sm shadow-sm transition-all cursor-grab group"
+            className="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-[13px] font-semibold text-slate-700 shadow-sm cursor-grab hover:bg-slate-50 transition-colors group"
             data-id={attr}
         >
-            <GripVertical size={14} className="text-slate-300 group-hover:text-blue-400 transition-colors" />
-            <span className="font-bold text-slate-700">{attr}</span>
+            <GripVertical size={14} className="text-slate-300 group-hover:text-slate-400 transition-colors" />
+            <span>{attr}</span>
 
             <Popover.Root>
                 <Popover.Trigger asChild>
-                    <button className={cn("ml-auto p-1.5 rounded-lg transition-colors hover:bg-slate-100", pivotProps.valueFilter[attr] && "bg-blue-50 text-blue-600")}>
+                    <button className={cn("text-slate-400 hover:text-slate-600 focus:outline-none ml-1 flex items-center justify-center p-0.5 rounded-sm transition-colors", pivotProps.valueFilter[attr] && "text-blue-600")}>
                         <Filter size={14} />
                     </button>
                 </Popover.Trigger>

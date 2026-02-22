@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { usePivot } from '../hooks/usePivot';
 import Sortable from 'react-sortablejs';
 import PivotTable from '../PivotTable';
+import { GripVertical, Filter } from 'lucide-react';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -19,18 +20,19 @@ export function ShadcnDashboardUI(props) {
     const renderAttribute = (attr) => (
         <div
             key={attr}
-            className="inline-flex items-center gap-1.5 bg-white border border-indigo-200 text-indigo-600 rounded px-2.5 py-1 text-xs font-medium cursor-grab hover:bg-indigo-50 shadow-sm transition-colors"
+            className="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-[13px] font-semibold text-slate-700 shadow-sm cursor-grab hover:bg-slate-50 transition-colors group"
             data-id={attr}
         >
+            <GripVertical size={14} className="text-slate-300 group-hover:text-slate-400 transition-colors" />
             <span>{attr}</span>
             <button
                 onClick={() => setOpenDropdown(openDropdown === attr ? null : attr)}
                 className={cn(
-                    "text-indigo-400 hover:text-indigo-600 focus:outline-none ml-1 flex items-center justify-center p-0.5 rounded-sm",
-                    pivotProps.valueFilter && pivotProps.valueFilter[attr] && "bg-indigo-100 text-indigo-700"
+                    "text-slate-400 hover:text-slate-600 focus:outline-none ml-1 flex items-center justify-center p-0.5 rounded-sm transition-colors",
+                    pivotProps.valueFilter && pivotProps.valueFilter[attr] && "text-blue-600"
                 )}
             >
-                <span className="text-[10px] leading-none">▾</span>
+                <Filter size={14} />
             </button>
         </div>
     );

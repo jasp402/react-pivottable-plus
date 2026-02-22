@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { TailwindUI } from '../src/renderers/TailwindUI';
 import { RadixUI } from '../src/renderers/RadixUI';
 import { ShadcnDashboardUI } from '../src/renderers/ShadcnDashboardUI';
 import tips from './tips';
 import TableRenderers from '../src/TableRenderers';
-import { Layout, MousePointer2, Box, Palette, Zap } from 'lucide-react';
+import PlotlyRenderers from '../src/PlotlyRenderers';
+import SubtotalRenderers from '../src/SubtotalRenderers';
+import { aggregators } from '../src/Utilities';
+import createPlotlyComponent from 'react-plotly.js/factory';
+import { Layout, Box, Palette, Zap } from 'lucide-react';
 import './tailwind-base.css';
 import '../src/pivottable.css';
 import '../src/grouping.css';
+
+// Initialize Plotly (assuming window.Plotly is available or use a fallback)
+const Plot = createPlotlyComponent(window.Plotly || {});
 
 const UI_VERSIONS = [
   { 
@@ -37,7 +44,14 @@ const UI_VERSIONS = [
 const Gallery = () => {
   const [activeUI, setActiveUI] = useState('tailwind');
 
-  // Estado compartido para los datos (opcional, cada UI podría tener su estado)
+  // Memoized renderers and aggregators to avoid re-calculation
+  const allRenderers = useMemo(() => Object.assign(
+    {},
+    TableRenderers,
+    PlotlyRenderers(Plot),
+    SubtotalRenderers
+  ), []);
+
   const [pivotState, setPivotState] = useState({
     data: tips,
     rows: ['Day of Week'],
@@ -45,35 +59,29 @@ const Gallery = () => {
     vals: ['Total Bill'],
     aggregatorName: 'Sum',
     rendererName: 'Table',
-    renderers: TableRenderers,
-    aggregators: {
-      Sum: (vals) => (data, rowKey, colKey) => ({
-        count: 0,
-        push(record) { this.count += parseFloat(record[vals[0]] || 0); },
-        value() { return this.count; },
-        format: x => x.toFixed(2)
-      }),
-      Count: (vals) => (data, rowKey, colKey) => ({
-        count: 0,
-        push() { this.count++; },
-        value() { return this.count; },
-        format: x => x
-      })
-    }
+    renderers: allRenderers,
+    aggregators: aggregators,
+    plotlyOptions: { width: 900, height: 500 },
+    plotlyConfig: {}
   });
 
   const renderActiveUI = () => {
+    const commonProps = {
+        ...pivotState,
+        onChange: setPivotState
+    };
+
     switch (activeUI) {
-      case 'tailwind': return <TailwindUI {...pivotState} onChange={setPivotState} />;
-      case 'radix': return <RadixUI {...pivotState} onChange={setPivotState} />;
-      case 'shadcn': return <ShadcnDashboardUI {...pivotState} onChange={setPivotState} />;
-      default: return <TailwindUI {...pivotState} onChange={setPivotState} />;
+      case 'tailwind': return <TailwindUI {...commonProps} />;
+      case 'radix': return <RadixUI {...commonProps} />;
+      case 'shadcn': return <ShadcnDashboardUI {...commonProps} />;
+      default: return <TailwindUI {...commonProps} />;
     }
   };
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
-      {/* Galería Sidebar */}
+      {/* Gallery Sidebar */}
       <aside className="w-72 bg-white border-r border-slate-200 flex flex-col shadow-2xl z-50">
         <div className="p-8 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-2 mb-2">
@@ -105,11 +113,6 @@ const Gallery = () => {
                   {ui.description}
                 </span>
               </div>
-              {activeUI === ui.id && (
-                <div className="ml-auto flex items-center h-full">
-                   <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                </div>
-              )}
             </button>
           ))}
         </nav>
@@ -129,16 +132,7 @@ const Gallery = () => {
                    <span className="text-2xl font-black text-slate-900">
                      {UI_VERSIONS.find(v => v.id === activeUI).name}
                    </span>
-                   <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-black rounded-full uppercase tracking-tighter">Live Demo</span>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-2 rounded-2xl border border-white shadow-sm">
-                 <div className="flex -space-x-2">
-                    {[1,2,3].map(i => <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-200" />)}
-                 </div>
-                 <div className="h-4 w-px bg-slate-200" />
-                 <button className="text-[10px] font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest px-2">Inspeccionar Código</button>
               </div>
            </div>
 
