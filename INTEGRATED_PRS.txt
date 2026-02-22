@@ -1,0 +1,24 @@
+# Registro de Pull Requests Integrados de plotly/react-pivottable
+
+## Integrados
+- PR 186: Hotfix React 19
+
+## Pendientes
+- PR 71: Add id attr to the .pvtTable element in TableRenders
+- PR 79: Updates to the react-pivottable component
+- PR 114: Bump papaparse from 4.6.3 to 5.3.0
+- PR 125: Use CSS child selectors for standard table tags
+- PR 130: Issue #109: fixing an error with totals and more than 2 attr.
+- PR 131: grouping and folding feature
+- PR 136: Enable rowTotals and colTotals as params in tableOptions
+- PR 144: translate
+- PR 146: Configure babel-preset-env target to modern browsers
+- PR 147: Cleanup and optimize code
+- PR 148: Add check to non existing row key when getting aggregator
+- PR 165: changes have been made.
+- PR 166: changed have been made
+- PR 167: Ability to hide row or column totals
+- PR 179: refactor: remove deprecated ReactDOM.findDOMNode usage
+- PR 180: fix: prevent duplicate item state from React 18 double render
+- PR 182: feat: implement subtotal and heatmap for react-pivottable
+- PR 184: fix: make the library compatible with React 19

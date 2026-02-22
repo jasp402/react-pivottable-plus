@@ -773,6 +773,7 @@ PivotData.forEachRecord = function(input, derivedAttributes, f) {
 };
 
 PivotData.defaultProps = {
+  id:"pvtTable",
   aggregators: aggregators,
   cols: [],
   rows: [],
@@ -786,6 +787,7 @@ PivotData.defaultProps = {
 };
 
 PivotData.propTypes = {
+  id: PropTypes.string,
   data: PropTypes.oneOfType([PropTypes.array, PropTypes.object, PropTypes.func])
     .isRequired,
   aggregatorName: PropTypes.string,
