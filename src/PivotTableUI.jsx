@@ -212,7 +212,7 @@ export class Dropdown extends React.PureComponent {
                     this.props.toggle();
                   } else {
                     this.props.setValue(r);
-                    this.props.toggle(); // Close the dropdown after selection
+                    this.props.toggle();
                   }
                 }}
                 className={
@@ -291,8 +291,10 @@ class PivotTableUI extends React.PureComponent {
     if (!newAttributes || !existingAttributes) {
       return existingAttributes || [];
     }
-    const duplicates = newAttributes.filter(item => existingAttributes.includes(item));
-    return duplicates.length > 0 
+    const duplicates = newAttributes.filter(item =>
+      existingAttributes.includes(item)
+    );
+    return duplicates.length > 0
       ? existingAttributes.filter(item => !duplicates.includes(item))
       : existingAttributes;
   }
@@ -316,7 +318,7 @@ class PivotTableUI extends React.PureComponent {
           update.rows = {$set: updatedRows};
         }
       }
-  
+
       this.sendPropUpdate(update);
     };
   }
@@ -547,7 +549,7 @@ class PivotTableUI extends React.PureComponent {
       this.propUpdater('rows'),
       'pvtAxisContainer pvtVertList pvtRows'
     );
-    
+
     const outputCell = (
       <td className="pvtOutput">
         <PivotTable

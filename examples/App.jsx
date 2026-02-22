@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import tips from './tips';
 import {sortAs} from '../src/Utilities';
+import SubtotalRenderers from '../src/SubtotalRenderers';
 import TableRenderers from '../src/TableRenderers';
-import createPlotlyComponent from 'react-plotly.js/factory';
 import createPlotlyRenderers from '../src/PlotlyRenderers';
+import createPlotlyComponent from 'react-plotly.js/factory';
 import PivotTableUI from '../src/PivotTableUI';
 import '../src/pivottable.css';
 import '../src/grouping.css';
@@ -65,6 +66,7 @@ class PivotTableUISmartWrapper extends React.PureComponent {
                 renderers={Object.assign(
                     {},
                     TableRenderers,
+                    SubtotalRenderers,
                     createPlotlyRenderers(Plot)
                 )}
                 {...this.state.pivotState}
@@ -82,12 +84,20 @@ export default class App extends React.Component {
             filename: 'Sample Dataset: Tips',
             pivotState: {
                 data: tips,
+<<<<<<< HEAD
                 rows: ['Payer Gender', "Meal"],
                 cols: ["Payer Smoker", 'Party Size',],
                 // aggregatorName: 'Sum over Sum',
                 vals: ['Tip', 'Total Bill'],
                 // rendererName: 'Grouped Column Chart',
                 rendererName: 'Table',
+=======
+                rows: ['Day of Week', 'Party Size'],
+                cols: ['Payer Gender', 'Meal'],
+                aggregatorName: 'Sum',
+                vals: ['Tip'],
+                rendererName: 'Table With Subtotal',
+>>>>>>> pr-182
                 sorters: {
                     Meal: sortAs(['Lunch', 'Dinner']),
                     'Day of Week': sortAs([
@@ -107,7 +117,6 @@ export default class App extends React.Component {
                         ) {
                             names.push(record.Meal);
                         });
-                        alert(names.join('\n'));
                     },
                 },
             },

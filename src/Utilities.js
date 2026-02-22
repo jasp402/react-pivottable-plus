@@ -49,13 +49,13 @@ const numberFormat = function(opts_in) {
 const rx = /(\d+)|(\D+)/g;
 const rd = /\d/;
 const rz = /^0/;
-const naturalSort = (as = null, bs = null, nulls_first = true) => {
-  // nulls first or last
+const naturalSort = (as, bs) => {
+  // nulls first
   if (bs !== null && as === null) {
-    return nulls_first ? -1 : 1;
+    return -1;
   }
   if (as !== null && bs === null) {
-    return nulls_first ? 1 : -1;
+    return 1;
   }
 
   // then raw NaNs
@@ -133,15 +133,7 @@ const sortAs = function(order) {
       l_mapping[x.toLowerCase()] = i;
     }
   }
-  return function(a = null, b = null, nulls_first = true) {
-    if (b !== null && a === null) {
-      return nulls_first ? -1 : 1;
-    }
-    if (a !== null && b === null) {
-      return nulls_first ? 1 : -1;
-    }
-
-
+  return function(a, b) {
     if (a in mapping && b in mapping) {
       return mapping[a] - mapping[b];
     } else if (a in mapping) {
@@ -155,7 +147,7 @@ const sortAs = function(order) {
     } else if (b in l_mapping) {
       return 1;
     }
-    return naturalSort(a, b, nulls_first);
+    return naturalSort(a, b);
   };
 };
 
@@ -533,8 +525,9 @@ const derivers = {
   },
 };
 
-// [1,2,3] -> [[1], [1,2], [1,2,3]]
-const subarrays = (array) => array.map((d, i) => array.slice(0, i + 1));
+// Given an array of attribute values, convert to a key that
+// can be used in objects.
+const flatKey = attrVals => attrVals.join(String.fromCharCode(0));
 
 /*
 Data Model class
@@ -561,7 +554,6 @@ class PivotData {
     this.allTotal = this.aggregator(this, [], []);
     this.sorted = false;
 
-    // iterate through input, accumulating data for cells
     PivotData.forEachRecord(
       this.props.data,
       this.props.derivedAttributes,
@@ -592,9 +584,6 @@ class PivotData {
         }
         for (const k in criteria) {
           const v = criteria[k];
-          if (v === undefined){
-            continue;
-          }
           if (v !== (k in record ? record[k] : 'null')) {
             return;
           }
@@ -604,7 +593,7 @@ class PivotData {
     );
   }
 
-  arrSort(attrs, nulls_first) {
+  arrSort(attrs) {
     let a;
     const sortersArr = (() => {
       const result = [];
@@ -613,12 +602,10 @@ class PivotData {
       }
       return result;
     })();
-    // Why not .map above?
-    // const sortersArr = Array.from(attrs).map(a => getSort(this.props.sorters, a));
     return function(a, b) {
       for (const i of Object.keys(sortersArr || {})) {
         const sorter = sortersArr[i];
-        const comparison = sorter(a[i], b[i], nulls_first);
+        const comparison = sorter(a[i], b[i]);
         if (comparison !== 0) {
           return comparison;
         }
@@ -639,7 +626,7 @@ class PivotData {
           this.rowKeys.sort((a, b) => -naturalSort(v(a, []), v(b, [])));
           break;
         default:
-          this.rowKeys.sort(this.arrSort(this.props.rows, this.props.rowGroupBefore));
+          this.rowKeys.sort(this.arrSort(this.props.rows));
       }
       switch (this.props.colOrder) {
         case 'value_a_to_z':
@@ -649,77 +636,64 @@ class PivotData {
           this.colKeys.sort((a, b) => -naturalSort(v([], a), v([], b)));
           break;
         default:
-          this.colKeys.sort(this.arrSort(this.props.cols, this.props.colGroupBefore));
+          this.colKeys.sort(this.arrSort(this.props.cols));
       }
     }
   }
 
-  getColKeys(all_keys = false) {
+  getColKeys() {
     this.sortKeys();
-    return all_keys ? this.colKeys : this.colKeys.filter(x => x.length === this.props.cols.length);
+    return this.colKeys;
   }
 
-  getRowKeys(all_keys = false) {
+  getRowKeys() {
     this.sortKeys();
-    return all_keys ? this.rowKeys : this.rowKeys.filter(x => x.length === this.props.rows.length);
+    return this.rowKeys;
   }
 
   processRecord(record) {
     // this code is called in a tight loop
-    let colKeys = [];
-    let rowKeys = [];
+    const colKey = [];
+    const rowKey = [];
     for (const x of Array.from(this.props.cols)) {
-      colKeys.push(x in record ? record[x] : 'null');
+      colKey.push(x in record ? record[x] : 'null');
     }
     for (const x of Array.from(this.props.rows)) {
-      rowKeys.push(x in record ? record[x] : 'null');
+      rowKey.push(x in record ? record[x] : 'null');
     }
-
-    colKeys = this.props.grouping ? subarrays(colKeys) : [colKeys];
-    rowKeys = this.props.grouping ? subarrays(rowKeys) : [rowKeys];
+    const flatRowKey = rowKey.join(String.fromCharCode(0));
+    const flatColKey = colKey.join(String.fromCharCode(0));
 
     this.allTotal.push(record);
 
-    for (const rowKey of rowKeys) {
-      const flatRowKey = rowKey.join(String.fromCharCode(0));
-
-      for (const colKey of colKeys) {
-        const flatColKey = colKey.join(String.fromCharCode(0));
-
-        if (rowKey.length !== 0) {
-          if (!this.rowTotals[flatRowKey]) {
-            this.rowKeys.push(rowKey);
-            this.rowTotals[flatRowKey] = this.aggregator(this, rowKey, []);
-          }
-          if (!(this.props.grouping && colKey.length !== 1)) {
-            this.rowTotals[flatRowKey].push(record);
-          }
-        }
-
-        if (colKey.length !== 0) {
-          if (!this.colTotals[flatColKey]) {
-            this.colKeys.push(colKey);
-            this.colTotals[flatColKey] = this.aggregator(this, [], colKey);
-          }
-          if (!(this.props.grouping && rowKey.length !== 1)) {
-            this.colTotals[flatColKey].push(record);
-          }
-        }
-
-        if (colKey.length !== 0 && rowKey.length !== 0) {
-          if (!this.tree[flatRowKey]) {
-            this.tree[flatRowKey] = {};
-          }
-          if (!this.tree[flatRowKey][flatColKey]) {
-            this.tree[flatRowKey][flatColKey] = this.aggregator(
-              this,
-              rowKey,
-              colKey
-            );
-          }
-          this.tree[flatRowKey][flatColKey].push(record);
-        }
+    if (rowKey.length !== 0) {
+      if (!this.rowTotals[flatRowKey]) {
+        this.rowKeys.push(rowKey);
+        this.rowTotals[flatRowKey] = this.aggregator(this, rowKey, []);
       }
+      this.rowTotals[flatRowKey].push(record);
+    }
+
+    if (colKey.length !== 0) {
+      if (!this.colTotals[flatColKey]) {
+        this.colKeys.push(colKey);
+        this.colTotals[flatColKey] = this.aggregator(this, [], colKey);
+      }
+      this.colTotals[flatColKey].push(record);
+    }
+
+    if (colKey.length !== 0 && rowKey.length !== 0) {
+      if (!this.tree[flatRowKey]) {
+        this.tree[flatRowKey] = {};
+      }
+      if (!this.tree[flatRowKey][flatColKey]) {
+        this.tree[flatRowKey][flatColKey] = this.aggregator(
+          this,
+          rowKey,
+          colKey
+        );
+      }
+      this.tree[flatRowKey][flatColKey].push(record);
     }
   }
 
@@ -746,6 +720,28 @@ class PivotData {
         },
       }
     );
+  }
+
+  forEachTotal(callback) {
+    // Process row totals
+    this.getRowKeys().forEach((rowKey, i) => {
+      callback([rowKey, null], i);
+    });
+
+    // Process column totals
+    this.getColKeys().forEach((colKey, i) => {
+      callback([null, colKey], i);
+    });
+  }
+
+  forEachCell(callback) {
+    this.getRowKeys().forEach(rowKey => {
+      this.getColKeys().forEach(colKey => {
+        const agg = this.getAggregator(rowKey, colKey);
+        const value = agg.value();
+        callback(value, rowKey, colKey);
+      });
+    });
   }
 }
 
@@ -802,7 +798,6 @@ PivotData.forEachRecord = function(input, derivedAttributes, f) {
 };
 
 PivotData.defaultProps = {
-  id:"pvtTable",
   aggregators: aggregators,
   cols: [],
   rows: [],
@@ -813,13 +808,9 @@ PivotData.defaultProps = {
   rowOrder: 'key_a_to_z',
   colOrder: 'key_a_to_z',
   derivedAttributes: {},
-  grouping: false,
-  rowGroupBefore: true,
-  colGroupBefore: false
 };
 
 PivotData.propTypes = {
-  id: PropTypes.string,
   data: PropTypes.oneOfType([PropTypes.array, PropTypes.object, PropTypes.func])
     .isRequired,
   aggregatorName: PropTypes.string,
@@ -834,9 +825,6 @@ PivotData.propTypes = {
   derivedAttributes: PropTypes.objectOf(PropTypes.func),
   rowOrder: PropTypes.oneOf(['key_a_to_z', 'value_a_to_z', 'value_z_to_a']),
   colOrder: PropTypes.oneOf(['key_a_to_z', 'value_a_to_z', 'value_z_to_a']),
-  grouping: PropTypes.bool,
-  rowGroupBefore: PropTypes.bool,
-  colGroupBefore: PropTypes.bool
 };
 
 export {
@@ -848,5 +836,6 @@ export {
   numberFormat,
   getSort,
   sortAs,
+  flatKey,
   PivotData,
 };
