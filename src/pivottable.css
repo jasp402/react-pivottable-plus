@@ -1,8 +1,23 @@
+:root {
+    --pvt-border-color: #BABFC7;
+    --pvt-header-bg: #F8F8F8;
+    --pvt-total-bg: #E9E9E9;
+    --pvt-row-hover-bg: #F5F7F7;
+    --pvt-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --pvt-font-size: 14px;
+    --pvt-font-weight-header: 600;
+    --pvt-font-weight-total: 700;
+    --pvt-row-height: 42px;
+    --pvt-text-color: #181d1f;
+    --pvt-text-color-muted: #6f7c87;
+}
+
 .pvtUi {
-    color: #2a3f5f;
-    font-family: Verdana;
+    color: var(--pvt-text-color);
+    font-family: var(--pvt-font-family);
     border-collapse: collapse;
 }
+
 .pvtUi select {
     user-select: none;
     -webkit-user-select: none;
@@ -13,46 +28,101 @@
 
 .pvtUi td.pvtOutput {
     vertical-align: top;
+    padding: 0;
 }
 
+/* ag-Grid Alpine Theme Pivot Table Styles */
 table.pvtTable {
     width: 100%;
-    font-size: 8pt;
-    text-align: left;
     border-collapse: collapse;
-    margin-top: 3px;
-    margin-left: 3px;
-    font-family: Verdana;
+    table-layout: fixed;
+    font-family: var(--pvt-font-family);
+    font-size: var(--pvt-font-size);
+    color: var(--pvt-text-color);
+    border-top: 1px solid var(--pvt-border-color);
+    border-left: 1px solid var(--pvt-border-color);
+    margin: 0;
 }
-table.pvtTable > thead > tr > th,
-table.pvtTable > tbody > tr > th {
-    background-color: #ebf0f8;
-    border: 1px solid #c8d4e3;
-    font-size: 8pt;
-    padding: 5px;
+
+table.pvtTable * {
+    box-sizing: border-box;
+}
+
+table.pvtTable th,
+table.pvtTable td {
+    height: var(--pvt-row-height);
+    line-height: var(--pvt-row-height);
+    padding: 0 12px;
+    border-right: 1px solid var(--pvt-border-color);
+    border-bottom: 1px solid var(--pvt-border-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: normal;
+}
+
+/* Header Styles */
+table.pvtTable thead tr th,
+table.pvtTable .pvtAxisLabel,
+table.pvtTable .pvtColLabel,
+table.pvtTable .pvtRowLabel {
+    background-color: var(--pvt-header-bg);
+    font-weight: var(--pvt-font-weight-header);
+    color: var(--pvt-text-color);
+    text-align: left;
+}
+
+table.pvtTable thead tr:last-child th {
+    border-bottom: 2px solid var(--pvt-border-color);
 }
 
 table.pvtTable .pvtColLabel {
     text-align: center;
 }
+
+/* Totals Styles */
+table.pvtTable .pvtTotal,
+table.pvtTable .pvtGrandTotal,
 table.pvtTable .pvtTotalLabel {
-    text-align: right;
+    background-color: var(--pvt-total-bg);
+    color: var(--pvt-text-color);
+    font-weight: var(--pvt-font-weight-header);
 }
 
-table.pvtTable > tbody > tr > td {
-    color: #2a3f5f;
-    padding: 5px;
+table.pvtTable .pvtGrandTotal,
+table.pvtTable tr:last-child td.pvtTotal,
+table.pvtTable tr:last-child th.pvtTotalLabel {
+    font-weight: var(--pvt-font-weight-total);
+}
+
+/* Thick Border Separators for Totals */
+table.pvtTable tr:last-child th,
+table.pvtTable tr:last-child td {
+    border-top: 2px solid var(--pvt-border-color);
+}
+
+table.pvtTable td.pvtTotal,
+table.pvtTable td.pvtGrandTotal {
+    border-left: 2px solid var(--pvt-border-color);
+}
+
+/* Numeric Alignment */
+.pvtVal-numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Data Row Hover */
+table.pvtTable tr.pvtRow-data:hover td {
+    background-color: var(--pvt-row-hover-bg);
+}
+
+/* Empty cells */
+table.pvtTable td:empty {
     background-color: #fff;
-    border: 1px solid #c8d4e3;
-    vertical-align: top;
-    text-align: right;
 }
 
-.pvtTotal,
-.pvtGrandTotal {
-    font-weight: bold;
-}
-
+/* UI Components (Keep existing logic but align styles) */
 .pvtRowOrder,
 .pvtColOrder {
     cursor: pointer;
@@ -61,11 +131,8 @@ table.pvtTable > tbody > tr > td {
     display: inline-block;
     user-select: none;
     text-decoration: none !important;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -khtml-user-select: none;
-    -ms-user-select: none;
 }
+
 
 .pvtAxisContainer,
 .pvtVals {

@@ -238,9 +238,10 @@ function makeRenderer(opts = {}) {
             {rowKeys.map(function(rowKey, i) {
               const totalAggregator = pivotData.getAggregator(rowKey, []);
               const rowGap = rowAttrs.length - rowKey.length;
+              const rowTotalValue = totalAggregator.value();
               return (
                 <tr key={`rowKeyRow${i}`}
-                  className={rowGap ? "pvtLevel" + rowGap : "pvtData"}>
+                  className={(rowGap ? "pvtLevel" + rowGap : "pvtData") + " pvtRow-data"}>
                   {rowKey.map(function(txt, j) {
                     if (compactRows && j < rowKey.length - 1) {
                       return null;
@@ -276,39 +277,41 @@ function makeRenderer(opts = {}) {
                   {colKeys.map(function(colKey, j) {
                     const aggregator = pivotData.getAggregator(rowKey, colKey);
                     const colGap = colAttrs.length - colKey.length;
+                    const val = aggregator.value();
+                    const isNumeric = typeof val === 'number';
                     return (
                       <td
-                        className={"pvtVal" + (colGap ? " pvtLevel" + colGap : "")}
+                        className={"pvtVal" + (colGap ? " pvtLevel" + colGap : "") + (isNumeric ? " pvtVal-numeric" : "")}
                         key={`pvtVal${i}-${j}`}
                         onClick={
                           getClickHandler &&
-                          getClickHandler(aggregator.value(), rowKey, colKey)
+                          getClickHandler(val, rowKey, colKey)
                         }
                         style={valueCellColors(
                           rowKey,
                           colKey,
-                          aggregator.value()
+                          val
                         )}
                       >
-                        {aggregator.format(aggregator.value())}
+                        {aggregator.format(val)}
                       </td>
                     );
                   })}
                   <td
-                    className="pvtTotal"
+                    className={"pvtTotal" + (typeof rowTotalValue === 'number' ? " pvtVal-numeric" : "")}
                     onClick={
                       getClickHandler &&
-                      getClickHandler(totalAggregator.value(), rowKey, [null])
+                      getClickHandler(rowTotalValue, rowKey, [null])
                     }
-                    style={colTotalColors(totalAggregator.value())}
+                    style={colTotalColors(rowTotalValue)}
                   >
-                    {totalAggregator.format(totalAggregator.value())}
+                    {totalAggregator.format(rowTotalValue)}
                   </td>
                 </tr>
               );
             })}
 
-            <tr>
+            <tr className="pvtTotalRow">
               <th
                 className="pvtTotalLabel"
                 colSpan={rowAttrs.length + (colAttrs.length === 0 ? 0 : 1)}
@@ -319,17 +322,19 @@ function makeRenderer(opts = {}) {
               {colKeys.map(function(colKey, i) {
                 const totalAggregator = pivotData.getAggregator([], colKey);
                 const colGap = colAttrs.length - colKey.length;
+                const totalVal = totalAggregator.value();
+                const isNumeric = typeof totalVal === 'number';
                 return (
                   <td
-                    className={"pvtTotal" + (colGap ? " pvtLevel" + colGap : "")}
+                    className={"pvtTotal" + (colGap ? " pvtLevel" + colGap : "") + (isNumeric ? " pvtVal-numeric" : "")}
                     key={`total${i}`}
                     onClick={
                       getClickHandler &&
-                      getClickHandler(totalAggregator.value(), [null], colKey)
+                      getClickHandler(totalVal, [null], colKey)
                     }
-                    style={rowTotalColors(totalAggregator.value())}
+                    style={rowTotalColors(totalVal)}
                   >
-                    {totalAggregator.format(totalAggregator.value())}
+                    {totalAggregator.format(totalVal)}
                   </td>
                 );
               })}
@@ -339,7 +344,7 @@ function makeRenderer(opts = {}) {
                   getClickHandler &&
                   getClickHandler(grandTotalAggregator.value(), [null], [null])
                 }
-                className="pvtGrandTotal"
+                className={"pvtGrandTotal" + (typeof grandTotalAggregator.value() === 'number' ? " pvtVal-numeric" : "")}
               >
                 {grandTotalAggregator.format(grandTotalAggregator.value())}
               </td>

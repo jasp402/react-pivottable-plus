@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import update from 'immutability-helper';
 import {PivotData, sortAs, getSort} from './Utilities';
 import PivotTable from './PivotTable';
-import Sortable from 'react-sortablejs';
+import {ReactSortable} from 'react-sortablejs';
 import Draggable from 'react-draggable';
 
 /* eslint-disable react/prop-types */
@@ -183,41 +183,49 @@ DraggableAttribute.propTypes = {
 
 export class Dropdown extends React.PureComponent {
   render() {
+    const {
+      zIndex = 1,
+      open = false,
+      toggle,
+      current,
+      values = [],
+      setValue,
+    } = this.props;
     return (
-      <div className="pvtDropdown" style={{zIndex: this.props.zIndex}}>
+      <div className="pvtDropdown" style={{zIndex}}>
         <div
           onClick={e => {
             e.stopPropagation();
-            this.props.toggle();
+            toggle();
           }}
           className={
             'pvtDropdownValue pvtDropdownCurrent ' +
-            (this.props.open ? 'pvtDropdownCurrentOpen' : '')
+            (open ? 'pvtDropdownCurrentOpen' : '')
           }
           role="button"
         >
-          <div className="pvtDropdownIcon">{this.props.open ? '×' : '▾'}</div>
-          {this.props.current || <span>&nbsp;</span>}
+          <div className="pvtDropdownIcon">{open ? '×' : '▾'}</div>
+          {current || <span>&nbsp;</span>}
         </div>
 
-        {this.props.open && (
+        {open && (
           <div className="pvtDropdownMenu">
-            {this.props.values.map(r => (
+            {values.map(r => (
               <div
                 key={r}
                 role="button"
                 onClick={e => {
                   e.stopPropagation();
-                  if (this.props.current === r) {
-                    this.props.toggle();
+                  if (current === r) {
+                    toggle();
                   } else {
-                    this.props.setValue(r);
-                    this.props.toggle();
+                    setValue(r);
+                    toggle();
                   }
                 }}
                 className={
                   'pvtDropdownValue ' +
-                  (r === this.props.current ? 'pvtDropdownActiveValue' : '')
+                  (r === current ? 'pvtDropdownActiveValue' : '')
                 }
               >
                 {r}
@@ -371,34 +379,40 @@ class PivotTableUI extends React.PureComponent {
   }
 
   makeDnDCell(items, onChange, classes) {
+    const list = items.map(x => ({id: x, name: x}));
     return (
-      <Sortable
-        options={{
-          group: 'shared',
-          ghostClass: 'pvtPlaceholder',
-          filter: '.pvtFilterBox',
-          preventOnFilter: false,
+      <ReactSortable
+        list={list}
+        setList={newList => {
+          const newOrder = newList.map(item => item.name);
+          // Only call onChange if order changed to avoid loops
+          if (JSON.stringify(items) !== JSON.stringify(newOrder)) {
+            onChange(newOrder);
+          }
         }}
+        group="shared"
+        ghostClass="pvtPlaceholder"
+        filter=".pvtFilterBox"
+        preventOnFilter={false}
         tag="td"
         className={classes}
-        onChange={onChange}
       >
-        {items.map(x => (
+        {list.map(item => (
           <DraggableAttribute
-            name={x}
-            key={x}
-            attrValues={this.state.attrValues[x]}
-            valueFilter={this.props.valueFilter[x] || {}}
-            sorter={getSort(this.props.sorters, x)}
+            name={item.name}
+            key={item.id}
+            attrValues={this.state.attrValues[item.name]}
+            valueFilter={this.props.valueFilter[item.name] || {}}
+            sorter={getSort(this.props.sorters, item.name)}
             menuLimit={this.props.menuLimit}
             setValuesInFilter={this.setValuesInFilter.bind(this)}
             addValuesToFilter={this.addValuesToFilter.bind(this)}
             moveFilterBoxToTop={this.moveFilterBoxToTop.bind(this)}
             removeValuesFromFilter={this.removeValuesFromFilter.bind(this)}
-            zIndex={this.state.zIndices[x] || this.state.maxZIndex}
+            zIndex={this.state.zIndices[item.name] || this.state.maxZIndex}
           />
         ))}
-      </Sortable>
+      </ReactSortable>
     );
   }
 
