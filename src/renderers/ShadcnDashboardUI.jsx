@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { usePivot } from '../hooks/usePivot';
 import Sortable from 'react-sortablejs';
 import PivotTable from '../PivotTable';
-import { GripVertical, Filter } from 'lucide-react';
+import { PivotData } from '../Utilities';
+import { GripVertical, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -16,6 +17,14 @@ export function ShadcnDashboardUI(props) {
 
     const aggregatorName = pivotProps.aggregatorName;
     const rendererName = pivotProps.rendererName;
+
+    const pivotData = new PivotData({
+        ...pivotProps,
+        data: pivotState.materializedInput,
+    });
+    const totalPivotRows = pivotData.getRowKeys().length;
+    const totalRecords = pivotState.materializedInput.length;
+    const totalPages = Math.ceil(totalPivotRows / (pivotProps.pageSize || 20));
 
     const renderAttribute = (attr) => (
         <div
@@ -128,6 +137,85 @@ export function ShadcnDashboardUI(props) {
                     <PivotTable {...pivotProps} data={pivotState.materializedInput} />
                 </div>
             </div>
+
+            {/* Footer: Totals and Pagination */}
+            {pivotProps.pagination && (
+                <div className="flex items-center justify-between px-6 py-3 border-t border-slate-200 bg-white text-slate-600">
+                    <div className="text-[13px] font-medium">
+                        Registros: <span className="text-slate-900">{totalRecords}</span> | Filas: <span className="text-slate-900">{totalPivotRows}</span>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-1.5">
+                            <button
+                                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                disabled={pivotProps.page <= 1}
+                                onClick={() => actions.updateProp('page', 1)}
+                            >
+                                <ChevronsLeft size={18} />
+                            </button>
+                            <button
+                                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                disabled={pivotProps.page <= 1}
+                                onClick={() => actions.updateProp('page', pivotProps.page - 1)}
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+
+                            <div className="flex items-center gap-2 mx-1">
+                                <span className="text-[13px] font-medium">Página</span>
+                                <input
+                                    type="number"
+                                    className="w-12 h-8 text-center border border-slate-300 rounded-md text-[13px] font-semibold text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                                    value={pivotProps.page}
+                                    min={1}
+                                    max={totalPages}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value, 10);
+                                        if (val > 0 && val <= totalPages) {
+                                            actions.updateProp('page', val);
+                                        }
+                                    }}
+                                />
+                                <span className="text-[13px] font-medium text-slate-400">de {totalPages}</span>
+                            </div>
+
+                            <button
+                                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                disabled={pivotProps.page >= totalPages}
+                                onClick={() => actions.updateProp('page', pivotProps.page + 1)}
+                            >
+                                <ChevronRight size={18} />
+                            </button>
+                            <button
+                                className="p-1 rounded-md hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                disabled={pivotProps.page >= totalPages}
+                                onClick={() => actions.updateProp('page', totalPages)}
+                            >
+                                <ChevronsRight size={18} />
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-2 border-l border-slate-200 pl-6">
+                            <span className="text-[13px] font-medium text-slate-400">Mostrar</span>
+                            <select
+                                className="text-[13px] font-semibold border border-slate-300 rounded-md px-2 py-1 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none hover:border-slate-400 bg-white text-slate-900"
+                                value={pivotProps.pageSize}
+                                onChange={(e) => {
+                                    actions.updateProp('pageSize', parseInt(e.target.value, 10));
+                                    actions.updateProp('page', 1);
+                                }}
+                            >
+                                {[10, 20, 50, 100].map(n => (
+                                    <option key={n} value={n}>
+                                        {n}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

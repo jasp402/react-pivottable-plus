@@ -557,6 +557,8 @@ class PivotTableUI extends React.PureComponent {
             data: {$set: this.state.materializedInput},
           })}
         />
+        {this.props.pagination &&
+          this.renderFooter(this.state.materializedInput)}
       </td>
     );
 
@@ -596,6 +598,87 @@ class PivotTableUI extends React.PureComponent {
           </tr>
         </tbody>
       </table>
+    );
+  }
+
+  renderFooter(data) {
+    const pivotData = new PivotData({
+      ...this.props,
+      data,
+    });
+    const totalPivotRows = pivotData.getRowKeys().length;
+    const totalRecords = data.length;
+    const totalPages = Math.ceil(totalPivotRows / this.props.pageSize);
+
+    return (
+      <div className="pvtFooter">
+        <div className="pvtFooterInfo">
+          Total registros: {totalRecords} | Filas: {totalPivotRows}
+        </div>
+        <div className="pvtFooterPagination">
+          <button
+            className="pvtButton"
+            disabled={this.props.page <= 1}
+            onClick={() => this.propUpdater('page')(1)}
+          >
+            «
+          </button>
+          <button
+            className="pvtButton"
+            disabled={this.props.page <= 1}
+            onClick={() => this.propUpdater('page')(this.props.page - 1)}
+          >
+            ‹
+          </button>
+          <span>
+            Página{' '}
+            <input
+              type="number"
+              className="pvtPageInput"
+              value={this.props.page}
+              min={1}
+              max={totalPages}
+              onChange={e => {
+                const val = parseInt(e.target.value, 10);
+                if (val > 0 && val <= totalPages) {
+                  this.propUpdater('page')(val);
+                }
+              }}
+            />{' '}
+            de {totalPages}
+          </span>
+          <button
+            className="pvtButton"
+            disabled={this.props.page >= totalPages}
+            onClick={() => this.propUpdater('page')(this.props.page + 1)}
+          >
+            ›
+          </button>
+          <button
+            className="pvtButton"
+            disabled={this.props.page >= totalPages}
+            onClick={() => this.propUpdater('page')(totalPages)}
+          >
+            »
+          </button>
+          <select
+            className="pvtPageSize"
+            value={this.props.pageSize}
+            onChange={e => {
+              this.sendPropUpdate({
+                pageSize: {$set: parseInt(e.target.value, 10)},
+                page: {$set: 1},
+              });
+            }}
+          >
+            {[10, 20, 50, 100].map(n => (
+              <option key={n} value={n}>
+                {n} / pág
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
     );
   }
 }

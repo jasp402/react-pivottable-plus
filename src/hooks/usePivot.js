@@ -17,6 +17,9 @@ export function usePivot(initialProps) {
     hiddenAttributes: [],
     hiddenFromAggregators: [],
     hiddenFromDragDrop: [],
+    pagination: false,
+    pageSize: 20,
+    page: 1,
     ...initialProps
   });
 

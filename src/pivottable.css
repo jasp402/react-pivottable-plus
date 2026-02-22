@@ -322,3 +322,53 @@ table.pvtTable > tbody > tr > td {
 .pvtRendererArea {
     padding: 5px;
 }
+
+.pvtFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 5px;
+    margin-top: 5px;
+    border-top: 1px solid #c8d4e3;
+    color: #506784;
+    font-size: 9pt;
+    font-family: Verdana;
+}
+
+.pvtFooterPagination {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pvtFooterPagination .pvtButton {
+    margin: 0;
+    cursor: pointer;
+    min-width: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pvtFooterPagination .pvtButton[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pvtPageInput {
+    width: 40px;
+    border: 1px solid #c8d4e3;
+    border-radius: 3px;
+    padding: 2px;
+    text-align: center;
+    color: #2a3f5f;
+}
+
+.pvtPageSize {
+    margin-left: 10px;
+    border: 1px solid #c8d4e3;
+    border-radius: 3px;
+    padding: 2px;
+    color: #2a3f5f;
+    background: white;
+}

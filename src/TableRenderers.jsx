@@ -84,6 +84,13 @@ function makeRenderer(opts = {}) {
         }
       }
 
+      const totalRows = rowKeys.length;
+      if (this.props.pagination) {
+        const start = (this.props.page - 1) * this.props.pageSize;
+        const end = start + this.props.pageSize;
+        rowKeys = rowKeys.slice(start, end);
+      }
+
       let valueCellColors = () => {};
       let rowTotalColors = () => {};
       let colTotalColors = () => {};

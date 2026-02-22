@@ -37,8 +37,11 @@ function Grouping(props) {
     };
 
     return <div className="row text-center">
-        <div className="col-md-2 col-md-offset-3">
+        <div className="col-md-2 col-md-offset-2">
             <Checkbox onChange={onChange} name="grouping" unchecked={true} />
+        </div>
+        <div className="col-md-2">
+            <Checkbox onChange={props.onChange} name="pagination" unchecked={true} />
         </div>
         <fieldset className="col-md-6" disabled={disabled}>
             <Checkbox onChange={props.onChange} name="compactRows"/>

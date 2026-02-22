@@ -13,6 +13,9 @@ const App = () => {
     vals: ['Total Bill'],
     aggregatorName: 'Sum',
     rendererName: 'Table',
+    pagination: true,
+    pageSize: 10,
+    page: 1,
     renderers: TableRenderers,
     aggregators: {
       Sum: (vals) => (data, rowKey, colKey) => {
