@@ -91,4 +91,4 @@ import { TailwindUI } from 'react-pivottable-plus/renderers/TailwindUI';
 Este proyecto es un fork mantenido de `react-pivottable` con el objetivo de proporcionar una experiencia de usuario superior y compatibilidad con las últimas versiones de React.
 
 ## ✍️ Créditos y Autoría
-Esta versión moderna y extendida (`react-pivottable-plus`) ha sido desarrollada y mantenida por **JASP4**, quien ha liderado la implementación de las nuevas interfaces (Tailwind, Shadcn, Radix), la actualización a React 19 y la optimización del motor de arrastre y filtrado.
+Esta versión moderna y extendida (`react-pivottable-plus`) ha sido desarrollada y mantenida por **Jasp402**, quien ha liderado la implementación de las nuevas interfaces (Tailwind, Shadcn, Radix), la actualización a React 19 y la optimización del motor de arrastre y filtrado.
