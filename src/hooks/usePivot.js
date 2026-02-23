@@ -1,7 +1,13 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { PivotData } from '../Utilities';
 
 export function usePivot(initialProps) {
+  // Mantener una referencia a las props iniciales para evitar cierres de ámbito (closures) obsoletos
+  const initialPropsRef = useRef(initialProps);
+  useEffect(() => {
+    initialPropsRef.current = initialProps;
+  }, [initialProps]);
+
   const [props, setProps] = useState({
     data: [],
     rows: [],
@@ -29,7 +35,12 @@ export function usePivot(initialProps) {
     unusedOrder: []
   });
 
-  // Materializar la entrada (similar a materializeInput en el original)
+  // Sincronizar props internas cuando cambian las externas, pero sin disparar onChange de vuelta
+  useEffect(() => {
+    setProps(prev => ({ ...prev, ...initialProps }));
+  }, [initialProps.data, initialProps.rows, initialProps.cols, initialProps.rendererName, initialProps.aggregatorName, initialProps.page, initialProps.pageSize]);
+
+  // Materializar la entrada
   useEffect(() => {
     const materializedInput = [];
     const attrValues = {};
@@ -64,21 +75,29 @@ export function usePivot(initialProps) {
 
   const updateProp = useCallback((key, value) => {
     setProps(prev => {
-        const newProps = { ...prev, [key]: value };
-        
-        // Lógica de evitar duplicados entre filas y columnas
-        if (key === 'rows') {
-            newProps.cols = prev.cols.filter(c => !value.includes(c));
-        } else if (key === 'cols') {
-            newProps.rows = prev.rows.filter(r => !value.includes(r));
+        let finalValue = value;
+        if (Array.isArray(value) && (key === 'rows' || key === 'cols' || key === 'vals')) {
+            finalValue = value.filter(v => v && v.trim() !== '');
         }
 
-        if (initialProps.onChange) {
-            initialProps.onChange(newProps);
+        const newProps = { ...prev, [key]: finalValue };
+        
+        if (key === 'rows') {
+            newProps.cols = prev.cols.filter(c => !finalValue.includes(c));
+        } else if (key === 'cols') {
+            newProps.rows = prev.rows.filter(r => !finalValue.includes(r));
         }
+
+        // Programar el onChange en un microtask o después del renderizado para evitar el warning de Gallery
+        setTimeout(() => {
+            if (initialPropsRef.current.onChange) {
+                initialPropsRef.current.onChange(newProps);
+            }
+        }, 0);
+
         return newProps;
     });
-  }, [initialProps.onChange]);
+  }, []);
 
   const toggleFilter = useCallback((attribute, value) => {
     setProps(prev => {
@@ -90,10 +109,14 @@ export function usePivot(initialProps) {
         }
         const newValueFilter = { ...prev.valueFilter, [attribute]: filter };
         const newProps = { ...prev, valueFilter: newValueFilter };
-        if (initialProps.onChange) initialProps.onChange(newProps);
+        
+        setTimeout(() => {
+            if (initialPropsRef.current.onChange) initialPropsRef.current.onChange(newProps);
+        }, 0);
+
         return newProps;
     });
-  }, [initialProps.onChange]);
+  }, []);
 
   const setValuesInFilter = useCallback((attribute, values) => {
       setProps(prev => {
@@ -102,10 +125,14 @@ export function usePivot(initialProps) {
               return r;
           }, {});
           const newProps = { ...prev, valueFilter: { ...prev.valueFilter, [attribute]: newFilter } };
-          if (initialProps.onChange) initialProps.onChange(newProps);
+          
+          setTimeout(() => {
+            if (initialPropsRef.current.onChange) initialPropsRef.current.onChange(newProps);
+          }, 0);
+
           return newProps;
       });
-  }, [initialProps.onChange]);
+  }, []);
 
   return {
     props,

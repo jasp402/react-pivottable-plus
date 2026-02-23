@@ -186,7 +186,7 @@ function makeRenderer(opts = {}) {
                     return (
                       <th
                         className={"pvtColLabel" + clickClass(clickable && colKey[j], isFolded([colKey.slice(0, j + 1)]))}
-                        key={`colKey${i}`}
+                        key={`colKey-${i}-${j}-${colKey[j]}`}
                         colSpan={x}
                         rowSpan={
                           j === colAttrs.length - 1 && rowAttrs.length !== 0
@@ -253,7 +253,7 @@ function makeRenderer(opts = {}) {
                     }
                     return (
                       <th
-                        key={`rowKeyLabel${i}-${j}`}
+                        key={`rowKeyLabel-${i}-${j}-${txt}`}
                         className={"pvtRowLabel" + clickClass(clickable && rowKey[j], isFolded([rowKey.slice(0, j + 1)]))}
                         rowSpan={x}
                         colSpan={

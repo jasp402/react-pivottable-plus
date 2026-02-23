@@ -1,17 +1,115 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { usePivot } from '../hooks/usePivot';
 import * as Select from '@radix-ui/react-select';
 import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, Filter, GripVertical, Check, Settings2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import Sortable from 'react-sortablejs';
+import Sortable from 'sortablejs';
 import PivotTable from '../PivotTable';
-import { PivotData } from '../Utilities';
+import { PivotData, sortAs } from '../Utilities';
 import clsx from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 function cn(...inputs) {
     return twMerge(clsx(inputs));
 }
+
+const DnDContainer = ({ list, setList, className, children }) => {
+    const el = useRef(null);
+    const setListRef = useRef(setList);
+    const listRef = useRef(list);
+    
+    useEffect(() => {
+        setListRef.current = setList;
+    }, [setList]);
+
+    useEffect(() => {
+        listRef.current = list;
+        if (el.current && el.current.sortable) {
+            el.current.sortable._currentList = list;
+        }
+    }, [list]);
+
+    useEffect(() => {
+        const sortable = Sortable.create(el.current, {
+            group: 'shared',
+            ghostClass: 'opacity-50',
+            animation: 150,
+            onEnd: (evt) => {
+                const { from, to, oldIndex, newIndex, item } = evt;
+                const itemId = item.getAttribute('data-id');
+
+                // ── REVERSIÓN SÍNCRONA DEL DOM ──
+                if (from !== to || oldIndex !== newIndex) {
+                    item.remove();
+                    const nextEl = from.children[oldIndex];
+                    if (nextEl) {
+                        from.insertBefore(item, nextEl);
+                    } else {
+                        from.appendChild(item);
+                    }
+                }
+
+                if (from === to) {
+                    // ── Reordenamiento interno ──
+                    const newOrder = [...listRef.current];
+                    newOrder.splice(oldIndex, 1);
+                    newOrder.splice(newIndex, 0, itemId);
+                    
+                    if (setListRef.current) {
+                        setListRef.current(newOrder);
+                    }
+                } else {
+                    // ── Movimiento entre listas ──
+                    const fromSortable = from.sortable;
+                    const toSortable = to.sortable;
+
+                    if (fromSortable?._setList && toSortable?._setList) {
+                        const sourceItems = fromSortable._currentList.filter(id => id !== itemId);
+                        const targetItems = [...toSortable._currentList];
+                        targetItems.splice(newIndex, 0, itemId);
+
+                        fromSortable._setList(sourceItems);
+                        toSortable._setList(targetItems);
+                    }
+                }
+            },
+        });
+
+        el.current.sortable = sortable;
+        sortable._setList = (newOrder) => {
+            if (setListRef.current) {
+                setListRef.current(newOrder);
+            }
+        };
+        sortable._currentList = listRef.current;
+
+        return () => sortable.destroy();
+    }, []);
+
+    return (
+        <div className={className}>
+            <ul 
+                ref={el} 
+                style={{ 
+                    listStyleType: 'none', 
+                    padding: 0, 
+                    margin: 0, 
+                    minHeight: '1.5rem', 
+                    width: '100%',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '8px'
+                }}
+            >
+                {React.Children.map(children, child => (
+                    <li key={child.key} data-id={child.props['data-id']}>
+                        {child}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
 
 const RadixSelect = ({ label, value, values, onChange }) => (
     <div className="flex flex-col gap-1.5 min-w-[180px]">
@@ -40,6 +138,9 @@ const RadixSelect = ({ label, value, values, onChange }) => (
 export function RadixUI(props) {
     const { props: pivotProps, state: pivotState, actions } = usePivot(props);
 
+    const aggregatorName = pivotProps.aggregatorName;
+    const rendererName = pivotProps.rendererName;
+
     const pivotData = new PivotData({
         ...pivotProps,
         data: pivotState.materializedInput,
@@ -47,6 +148,13 @@ export function RadixUI(props) {
     const totalPivotRows = pivotData.getRowKeys().length;
     const totalRecords = pivotState.materializedInput.length;
     const totalPages = Math.ceil(totalPivotRows / (pivotProps.pageSize || 20));
+
+    const unusedList = Object.keys(pivotState.attrValues)
+        .filter(e => e && e.trim() !== '' && !pivotProps.rows.includes(e) && !pivotProps.cols.includes(e))
+        .sort(sortAs(pivotState.unusedOrder || []));
+
+    const colList = pivotProps.cols.filter(e => e && e.trim() !== '');
+    const rowList = pivotProps.rows.filter(e => e && e.trim() !== '');
 
     const renderAttribute = (attr) => (
         <div
@@ -88,7 +196,8 @@ export function RadixUI(props) {
                 {/* Renderer */}
                 <div className="w-[300px] p-4 border-r border-slate-200 bg-white flex flex-col justify-start flex-shrink-0">
                     <RadixSelect
-                        value={pivotProps.rendererName}
+                        label="Visualización"
+                        value={rendererName}
                         values={Object.keys(pivotProps.renderers)}
                         onChange={(v) => actions.updateProp('rendererName', v)}
                     />
@@ -96,15 +205,15 @@ export function RadixUI(props) {
 
                 {/* Unused Attrs */}
                 <div className="flex-1 p-4 bg-slate-50/80">
-                    <Sortable
-                        options={{ group: 'shared', ghostClass: 'opacity-50', animation: 150 }}
+                    <DnDContainer
+                        list={unusedList}
+                        setList={(newOrder) => {
+                            actions.setUnusedOrder(newOrder);
+                        }}
                         className="flex flex-wrap gap-2 w-full min-h-[1.5rem]"
-                        onChange={(order) => actions.setUnusedOrder(order)}
                     >
-                        {Object.keys(pivotState.attrValues)
-                            .filter(e => !pivotProps.rows.includes(e) && !pivotProps.cols.includes(e))
-                            .map(renderAttribute)}
-                    </Sortable>
+                        {unusedList.map(renderAttribute)}
+                    </DnDContainer>
                 </div>
             </div>
 
@@ -116,7 +225,8 @@ export function RadixUI(props) {
                         <div className="flex items-center gap-2">
                             <div className="flex-1">
                                 <RadixSelect
-                                    value={pivotProps.aggregatorName}
+                                    label="Agregador"
+                                    value={aggregatorName}
                                     values={Object.keys(pivotProps.aggregators)}
                                     onChange={(v) => actions.updateProp('aggregatorName', v)}
                                 />
@@ -128,8 +238,9 @@ export function RadixUI(props) {
                             </div>
                         </div>
 
-                        {pivotProps.aggregators[pivotProps.aggregatorName]([])().numInputs > 0 && (
+                        {pivotProps.aggregators[aggregatorName]([])().numInputs > 0 && (
                             <RadixSelect
+                                label="Atributo de Valor"
                                 value={pivotProps.vals[0] || ''}
                                 values={Object.keys(pivotState.attrValues)}
                                 onChange={(v) => actions.updateProp('vals', [v])}
@@ -140,13 +251,15 @@ export function RadixUI(props) {
 
                 {/* Col Attrs */}
                 <div className="flex-1 p-4 bg-white">
-                    <Sortable
-                        options={{ group: 'shared', ghostClass: 'opacity-50', animation: 150 }}
+                    <DnDContainer
+                        list={colList}
+                        setList={(newOrder) => {
+                            actions.updateProp('cols', newOrder);
+                        }}
                         className="flex flex-wrap gap-2 w-full min-h-[1.5rem]"
-                        onChange={(order) => actions.updateProp('cols', order)}
                     >
-                        {pivotProps.cols.map(renderAttribute)}
-                    </Sortable>
+                        {colList.map(renderAttribute)}
+                    </DnDContainer>
                 </div>
             </div>
 
@@ -154,13 +267,15 @@ export function RadixUI(props) {
             <div className="flex w-full min-h-[400px]">
                 {/* Row Attrs */}
                 <div className="w-[300px] p-4 border-r border-slate-200 bg-white flex-shrink-0">
-                    <Sortable
-                        options={{ group: 'shared', ghostClass: 'opacity-50', animation: 150 }}
+                    <DnDContainer
+                        list={rowList}
+                        setList={(newOrder) => {
+                            actions.updateProp('rows', newOrder);
+                        }}
                         className="flex flex-col gap-2 w-full min-h-[1.5rem]"
-                        onChange={(order) => actions.updateProp('rows', order)}
                     >
-                        {pivotProps.rows.map(renderAttribute)}
-                    </Sortable>
+                        {rowList.map(renderAttribute)}
+                    </DnDContainer>
                 </div>
 
                 {/* Table Output */}

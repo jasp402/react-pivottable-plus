@@ -1,628 +1,611 @@
-import React from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import update from 'immutability-helper';
-import {PivotData, sortAs, getSort} from './Utilities';
+import { PivotData, sortAs, getSort } from './Utilities';
 import PivotTable from './PivotTable';
-import {ReactSortable} from 'react-sortablejs';
 import Draggable from 'react-draggable';
 
-/* eslint-disable react/prop-types */
-// eslint can't see inherited propTypes!
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-export class DraggableAttribute extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {open: false, filterText: ''};
-    this.nodeRef = React.createRef();
-  }
+// ─── DraggableAttribute ────────────────────────────────────────────────────────
 
-  toggleValue(value) {
-    if (value in this.props.valueFilter) {
-      this.props.removeValuesFromFilter(this.props.name, [value]);
-    } else {
-      this.props.addValuesToFilter(this.props.name, [value]);
-    }
-  }
+export const DraggableAttribute = React.forwardRef(
+  (
+    {
+      name,
+      attrValues,
+      valueFilter,
+      sorter,
+      menuLimit,
+      setValuesInFilter,
+      addValuesToFilter,
+      moveFilterBoxToTop,
+      removeValuesFromFilter,
+      zIndex,
+      // dnd-kit drag props pasados desde SortableAttribute
+      dragHandleProps,
+      isDragging,
+    },
+    ref
+  ) => {
+    const [open, setOpen] = useState(false);
+    const [filterText, setFilterText] = useState('');
+    const nodeRef = useRef(null);
 
-  matchesFilter(x) {
-    return x
-      .toLowerCase()
-      .trim()
-      .includes(this.state.filterText.toLowerCase().trim());
-  }
+    const toggleValue = value => {
+      if (value in valueFilter) {
+        removeValuesFromFilter(name, [value]);
+      } else {
+        addValuesToFilter(name, [value]);
+      }
+    };
 
-  selectOnly(e, value) {
-    e.stopPropagation();
-    this.props.setValuesInFilter(
-      this.props.name,
-      Object.keys(this.props.attrValues).filter(y => y !== value)
-    );
-  }
+    const matchesFilter = x =>
+      x.toLowerCase().trim().includes(filterText.toLowerCase().trim());
 
-  getFilterBox() {
-    const showMenu =
-      Object.keys(this.props.attrValues).length < this.props.menuLimit;
+    const selectOnly = (e, value) => {
+      e.stopPropagation();
+      setValuesInFilter(
+        name,
+        Object.keys(attrValues).filter(y => y !== value)
+      );
+    };
 
-    const values = Object.keys(this.props.attrValues);
-    const shown = values
-      .filter(this.matchesFilter.bind(this))
-      .sort(this.props.sorter);
+    const getFilterBox = () => {
+      const showMenu = Object.keys(attrValues).length < menuLimit;
+      const values = Object.keys(attrValues);
+      const shown = values.filter(matchesFilter).sort(sorter);
 
-    return (
-      <Draggable handle=".pvtDragHandle" nodeRef={this.nodeRef}>
-        <div
-          ref={this.nodeRef}
-          className="pvtFilterBox"
-          style={{
-            display: 'block',
-            cursor: 'initial',
-            zIndex: this.props.zIndex,
-          }}
-          onClick={() => this.props.moveFilterBoxToTop(this.props.name)}
-        >
-          <a onClick={() => this.setState({open: false})} className="pvtCloseX">
-            ×
-          </a>
-          <span className="pvtDragHandle">☰</span>
-          <h4>{this.props.name}</h4>
+      return (
+        <Draggable handle=".pvtDragHandle" nodeRef={nodeRef}>
+          <div
+            ref={nodeRef}
+            className="pvtFilterBox"
+            style={{ display: 'block', cursor: 'initial', zIndex }}
+            onClick={() => moveFilterBoxToTop(name)}
+          >
+            <a onClick={() => setOpen(false)} className="pvtCloseX">×</a>
+            <span className="pvtDragHandle">☰</span>
+            <h4>{name}</h4>
 
-          {showMenu || <p>(too many values to show)</p>}
+            {showMenu || <p>(too many values to show)</p>}
 
-          {showMenu && (
-            <p>
-              <input
-                type="text"
-                placeholder="Filter values"
-                className="pvtSearch"
-                value={this.state.filterText}
-                onChange={e =>
-                  this.setState({
-                    filterText: e.target.value,
-                  })
-                }
-              />
-              <br />
-              <a
-                role="button"
-                className="pvtButton"
-                onClick={() =>
-                  this.props.removeValuesFromFilter(
-                    this.props.name,
-                    Object.keys(this.props.attrValues).filter(
-                      this.matchesFilter.bind(this)
+            {showMenu && (
+              <p>
+                <input
+                  type="text"
+                  placeholder="Filter values"
+                  className="pvtSearch"
+                  value={filterText}
+                  onChange={e => setFilterText(e.target.value)}
+                />
+                <br />
+                <a
+                  role="button"
+                  className="pvtButton"
+                  onClick={() =>
+                    removeValuesFromFilter(
+                      name,
+                      Object.keys(attrValues).filter(matchesFilter)
                     )
-                  )
-                }
-              >
-                Select {values.length === shown.length ? 'All' : shown.length}
-              </a>{' '}
-              <a
-                role="button"
-                className="pvtButton"
-                onClick={() =>
-                  this.props.addValuesToFilter(
-                    this.props.name,
-                    Object.keys(this.props.attrValues).filter(
-                      this.matchesFilter.bind(this)
-                    )
-                  )
-                }
-              >
-                Deselect {values.length === shown.length ? 'All' : shown.length}
-              </a>
-            </p>
-          )}
-
-          {showMenu && (
-            <div className="pvtCheckContainer">
-              {shown.map(x => (
-                <p
-                  key={x}
-                  onClick={() => this.toggleValue(x)}
-                  className={x in this.props.valueFilter ? '' : 'selected'}
+                  }
                 >
-                  <a className="pvtOnly" onClick={e => this.selectOnly(e, x)}>
-                    only
-                  </a>
-                  <a className="pvtOnlySpacer">&nbsp;</a>
+                  Select {values.length === shown.length ? 'All' : shown.length}
+                </a>{' '}
+                <a
+                  role="button"
+                  className="pvtButton"
+                  onClick={() =>
+                    addValuesToFilter(
+                      name,
+                      Object.keys(attrValues).filter(matchesFilter)
+                    )
+                  }
+                >
+                  Deselect {values.length === shown.length ? 'All' : shown.length}
+                </a>
+              </p>
+            )}
 
-                  {x === '' ? <em>null</em> : x}
-                </p>
-              ))}
-            </div>
-          )}
-        </div>
-      </Draggable>
-    );
-  }
+            {showMenu && (
+              <div className="pvtCheckContainer">
+                {shown.map(x => (
+                  <p
+                    key={x}
+                    onClick={() => toggleValue(x)}
+                    className={x in valueFilter ? '' : 'selected'}
+                  >
+                    <a className="pvtOnly" onClick={e => selectOnly(e, x)}>only</a>
+                    <a className="pvtOnlySpacer">&nbsp;</a>
+                    {x === '' ? <em>null</em> : x}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        </Draggable>
+      );
+    };
 
-  toggleFilterBox() {
-    this.setState({open: !this.state.open});
-    this.props.moveFilterBoxToTop(this.props.name);
-  }
+    const toggleFilterBox = () => {
+      setOpen(o => !o);
+      moveFilterBoxToTop(name);
+    };
 
-  render() {
-    const filtered =
-      Object.keys(this.props.valueFilter).length !== 0
-        ? 'pvtFilteredAttribute'
-        : '';
+    const filtered = Object.keys(valueFilter).length !== 0 ? 'pvtFilteredAttribute' : '';
+
     return (
-      <li data-id={this.props.name}>
-        <span className={'pvtAttr ' + filtered}>
-          {this.props.name}
+      <li
+        ref={ref}
+        data-id={name}
+        style={{ opacity: isDragging ? 0.4 : 1 }}
+      >
+        <span className={'pvtAttr ' + filtered} {...dragHandleProps}>
+          {name}
           <span
             className="pvtTriangle"
-            onClick={this.toggleFilterBox.bind(this)}
+            onClick={e => { e.stopPropagation(); toggleFilterBox(); }}
           >
-            {' '}
-            ▾
+            {' '}▾
           </span>
         </span>
-
-        {this.state.open ? this.getFilterBox() : null}
+        {open ? getFilterBox() : null}
       </li>
     );
   }
-}
+);
+DraggableAttribute.displayName = 'DraggableAttribute';
 
-DraggableAttribute.defaultProps = {
-  valueFilter: {},
+// ─── SortableAttribute: wrapper que conecta dnd-kit con DraggableAttribute ────
+
+const SortableAttribute = ({ id, ...rest }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <DraggableAttribute
+      ref={setNodeRef}
+      name={id}
+      isDragging={isDragging}
+      dragHandleProps={{ ...attributes, ...listeners, style }}
+      {...rest}
+    />
+  );
 };
 
-DraggableAttribute.propTypes = {
-  name: PropTypes.string.isRequired,
-  addValuesToFilter: PropTypes.func.isRequired,
-  removeValuesFromFilter: PropTypes.func.isRequired,
-  attrValues: PropTypes.objectOf(PropTypes.number).isRequired,
-  valueFilter: PropTypes.objectOf(PropTypes.bool),
-  moveFilterBoxToTop: PropTypes.func.isRequired,
-  sorter: PropTypes.func.isRequired,
-  menuLimit: PropTypes.number,
-  zIndex: PropTypes.number,
-};
+// ─── Dropdown ─────────────────────────────────────────────────────────────────
 
-export class Dropdown extends React.PureComponent {
-  render() {
-    const {
-      zIndex = 1,
-      open = false,
-      toggle,
-      current,
-      values = [],
-      setValue,
-    } = this.props;
-    return (
-      <div className="pvtDropdown" style={{zIndex}}>
-        <div
-          onClick={e => {
-            e.stopPropagation();
-            toggle();
-          }}
-          className={
-            'pvtDropdownValue pvtDropdownCurrent ' +
-            (open ? 'pvtDropdownCurrentOpen' : '')
-          }
-          role="button"
-        >
-          <div className="pvtDropdownIcon">{open ? '×' : '▾'}</div>
-          {current || <span>&nbsp;</span>}
-        </div>
-
-        {open && (
-          <div className="pvtDropdownMenu">
-            {values.map(r => (
-              <div
-                key={r}
-                role="button"
-                onClick={e => {
-                  e.stopPropagation();
-                  if (current === r) {
-                    toggle();
-                  } else {
-                    setValue(r);
-                    toggle();
-                  }
-                }}
-                className={
-                  'pvtDropdownValue ' +
-                  (r === current ? 'pvtDropdownActiveValue' : '')
-                }
-              >
-                {r}
-              </div>
-            ))}
+export const Dropdown = ({ zIndex = 1, open = false, toggle, current, values = [], setValue }) => (
+  <div className="pvtDropdown" style={{ zIndex }}>
+    <div
+      onClick={e => { e.stopPropagation(); toggle(); }}
+      className={'pvtDropdownValue pvtDropdownCurrent ' + (open ? 'pvtDropdownCurrentOpen' : '')}
+      role="button"
+    >
+      <div className="pvtDropdownIcon">{open ? '×' : '▾'}</div>
+      {current || <span>&nbsp;</span>}
+    </div>
+    {open && (
+      <div className="pvtDropdownMenu">
+        {values.map(r => (
+          <div
+            key={r}
+            role="button"
+            onClick={e => {
+              e.stopPropagation();
+              if (current === r) toggle();
+              else { setValue(r); toggle(); }
+            }}
+            className={'pvtDropdownValue ' + (r === current ? 'pvtDropdownActiveValue' : '')}
+          >
+            {r}
           </div>
-        )}
+        ))}
       </div>
-    );
-  }
-}
+    )}
+  </div>
+);
 
-class PivotTableUI extends React.PureComponent {
-  constructor(props) {
-    super(props);
-    this.state = {
-      unusedOrder: [],
-      zIndices: {},
-      maxZIndex: 1000,
-      openDropdown: false,
-      attrValues: {},
-      materializedInput: [],
-    };
-  }
+// ─── DnDCell: lista sortable con dnd-kit ──────────────────────────────────────
 
-  componentDidMount() {
-    this.materializeInput(this.props.data);
-  }
+const DnDCell = ({
+  id,           // identificador único de esta zona (ej: 'rows', 'cols', 'unused')
+  items,
+  classes,
+  state,
+  valueFilter,
+  sorters,
+  menuLimit,
+  setValuesInFilter,
+  addValuesToFilter,
+  moveFilterBoxToTop,
+  removeValuesFromFilter,
+  isHorizontal,
+}) => {
+  const strategy = isHorizontal
+    ? horizontalListSortingStrategy
+    : verticalListSortingStrategy;
 
-  componentDidUpdate() {
-    this.materializeInput(this.props.data);
-  }
+  return (
+    <td className={classes}>
+      <SortableContext id={id} items={items} strategy={strategy}>
+        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {items.map(x => (
+            <SortableAttribute
+              key={x}
+              id={x}
+              attrValues={state.attrValues[x] || {}}
+              valueFilter={valueFilter[x] || {}}
+              sorter={getSort(sorters, x)}
+              menuLimit={menuLimit}
+              setValuesInFilter={setValuesInFilter}
+              addValuesToFilter={addValuesToFilter}
+              moveFilterBoxToTop={moveFilterBoxToTop}
+              removeValuesFromFilter={removeValuesFromFilter}
+              zIndex={state.zIndices[x] || state.maxZIndex}
+            />
+          ))}
+        </ul>
+      </SortableContext>
+    </td>
+  );
+};
 
-  materializeInput(nextData) {
-    if (this.state.data === nextData) {
-      return;
-    }
-    const newState = {
-      data: nextData,
-      attrValues: {},
-      materializedInput: [],
-    };
+// ─── PivotTableUI ─────────────────────────────────────────────────────────────
+
+const PivotTableUI = props => {
+  const [state, setState] = useState({
+    unusedOrder: [],
+    zIndices: {},
+    maxZIndex: 1000,
+    openDropdown: false,
+    attrValues: {},
+    materializedInput: [],
+    data: null,
+  });
+
+  // activeId: el atributo que se está arrastrando
+  const [activeId, setActiveId] = useState(null);
+
+  const {
+    data,
+    onChange,
+    rows,
+    cols,
+    aggregatorName,
+    aggregators,
+    vals,
+    rendererName,
+    renderers,
+    valueFilter,
+    sorters,
+    menuLimit,
+    unusedOrientationCutoff,
+    hiddenAttributes,
+    hiddenFromAggregators,
+    hiddenFromDragDrop,
+    pagination,
+    page,
+    pageSize,
+    rowOrder,
+    colOrder,
+    derivedAttributes,
+  } = props;
+
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onChangeRef.current = onChange; }, [onChange]);
+
+  // ── Materializar datos ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (state.data === data) return;
+    const newState = { data, attrValues: {}, materializedInput: [] };
     let recordsProcessed = 0;
-    PivotData.forEachRecord(
-      newState.data,
-      this.props.derivedAttributes,
-      function(record) {
-        newState.materializedInput.push(record);
-        for (const attr of Object.keys(record)) {
-          if (!(attr in newState.attrValues)) {
-            newState.attrValues[attr] = {};
-            if (recordsProcessed > 0) {
-              newState.attrValues[attr].null = recordsProcessed;
-            }
-          }
+    PivotData.forEachRecord(data, derivedAttributes, record => {
+      newState.materializedInput.push(record);
+      for (const attr of Object.keys(record)) {
+        if (!(attr in newState.attrValues)) {
+          newState.attrValues[attr] = {};
+          if (recordsProcessed > 0) newState.attrValues[attr].null = recordsProcessed;
         }
-        for (const attr in newState.attrValues) {
-          const value = attr in record ? record[attr] : 'null';
-          if (!(value in newState.attrValues[attr])) {
-            newState.attrValues[attr][value] = 0;
-          }
-          newState.attrValues[attr][value]++;
-        }
-        recordsProcessed++;
       }
-    );
-    this.setState(newState);
-  }
+      for (const attr in newState.attrValues) {
+        const value = attr in record ? record[attr] : 'null';
+        if (!(value in newState.attrValues[attr])) newState.attrValues[attr][value] = 0;
+        newState.attrValues[attr][value]++;
+      }
+      recordsProcessed++;
+    });
+    setState(s => ({ ...s, ...newState }));
+  }, [data, derivedAttributes, state.data]);
 
-  handleDuplicates(newAttributes, existingAttributes) {
-    if (!newAttributes || !existingAttributes) {
-      return existingAttributes || [];
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  const handleDuplicates = (newAttrs, existingAttrs) => {
+    if (!newAttrs || !existingAttrs) return existingAttrs || [];
+    const dups = newAttrs.filter(item => existingAttrs.includes(item));
+    return dups.length > 0 ? existingAttrs.filter(item => !dups.includes(item)) : existingAttrs;
+  };
+
+  const sendPropUpdate = useCallback(command => {
+    const newProps = update(props, command);
+    onChangeRef.current?.(newProps);
+  }, [props]);
+
+  const propUpdater = useCallback(key => value => {
+    const updateObj = { [key]: { $set: value } };
+    if (key === 'rows') {
+      const updatedCols = handleDuplicates(value, cols);
+      if (updatedCols.length !== cols.length) updateObj.cols = { $set: updatedCols };
+    } else if (key === 'cols') {
+      const updatedRows = handleDuplicates(value, rows);
+      if (updatedRows.length !== rows.length) updateObj.rows = { $set: updatedRows };
     }
-    const duplicates = newAttributes.filter(item =>
-      existingAttributes.includes(item)
-    );
-    return duplicates.length > 0
-      ? existingAttributes.filter(item => !duplicates.includes(item))
-      : existingAttributes;
-  }
+    sendPropUpdate(updateObj);
+  }, [cols, rows, sendPropUpdate]);
 
-  sendPropUpdate(command) {
-    this.props.onChange(update(this.props, command));
-  }
-
-  propUpdater(key) {
-    return value => {
-      const update = {[key]: {$set: value}};
-
-      if (key === 'rows') {
-        const updatedCols = this.handleDuplicates(value, this.props.cols);
-        if (updatedCols.length !== this.props.cols.length) {
-          update.cols = {$set: updatedCols};
-        }
-      } else if (key === 'cols') {
-        const updatedRows = this.handleDuplicates(value, this.props.rows);
-        if (updatedRows.length !== this.props.rows.length) {
-          update.rows = {$set: updatedRows};
-        }
-      }
-
-      this.sendPropUpdate(update);
-    };
-  }
-
-  setValuesInFilter(attribute, values) {
-    this.sendPropUpdate({
+  const setValuesInFilter = useCallback((attribute, values) => {
+    sendPropUpdate({
       valueFilter: {
-        [attribute]: {
-          $set: values.reduce((r, v) => {
-            r[v] = true;
-            return r;
-          }, {}),
-        },
+        [attribute]: { $set: values.reduce((r, v) => { r[v] = true; return r; }, {}) },
       },
     });
-  }
+  }, [sendPropUpdate]);
 
-  addValuesToFilter(attribute, values) {
-    if (attribute in this.props.valueFilter) {
-      this.sendPropUpdate({
+  const addValuesToFilter = useCallback((attribute, values) => {
+    if (attribute in valueFilter) {
+      sendPropUpdate({
         valueFilter: {
-          [attribute]: values.reduce((r, v) => {
-            r[v] = {$set: true};
-            return r;
-          }, {}),
+          [attribute]: values.reduce((r, v) => { r[v] = { $set: true }; return r; }, {}),
         },
       });
     } else {
-      this.setValuesInFilter(attribute, values);
+      setValuesInFilter(attribute, values);
     }
-  }
+  }, [sendPropUpdate, valueFilter, setValuesInFilter]);
 
-  removeValuesFromFilter(attribute, values) {
-    this.sendPropUpdate({
-      valueFilter: {[attribute]: {$unset: values}},
-    });
-  }
+  const removeValuesFromFilter = useCallback((attribute, values) => {
+    sendPropUpdate({ valueFilter: { [attribute]: { $unset: values } } });
+  }, [sendPropUpdate]);
 
-  moveFilterBoxToTop(attribute) {
-    this.setState(
-      update(this.state, {
-        maxZIndex: {$set: this.state.maxZIndex + 1},
-        zIndices: {[attribute]: {$set: this.state.maxZIndex + 1}},
-      })
-    );
-  }
+  const moveFilterBoxToTop = useCallback(attribute => {
+    setState(s => ({
+      ...s,
+      maxZIndex: s.maxZIndex + 1,
+      zIndices: { ...s.zIndices, [attribute]: s.maxZIndex + 1 },
+    }));
+  }, []);
 
-  isOpen(dropdown) {
-    return this.state.openDropdown === dropdown;
-  }
+  // ── Listas de atributos ──────────────────────────────────────────────────────
+  const unusedAttrs = Object.keys(state.attrValues)
+    .filter(e => e && e.trim() !== '' && !rows.includes(e) && !cols.includes(e) && !hiddenAttributes.includes(e) && !hiddenFromDragDrop.includes(e))
+    .sort(sortAs(state.unusedOrder));
 
-  makeDnDCell(items, onChange, classes) {
-    const list = items.map(x => ({id: x, name: x}));
-    return (
-      <ReactSortable
-        list={list}
-        setList={newList => {
-          const newOrder = newList.map(item => item.name);
-          // Only call onChange if order changed to avoid loops
-          if (JSON.stringify(items) !== JSON.stringify(newOrder)) {
-            onChange(newOrder);
-          }
-        }}
-        group="shared"
-        ghostClass="pvtPlaceholder"
-        filter=".pvtFilterBox"
-        preventOnFilter={false}
-        tag="td"
-        className={classes}
-      >
-        {list.map(item => (
-          <DraggableAttribute
-            name={item.name}
-            key={item.id}
-            attrValues={this.state.attrValues[item.name]}
-            valueFilter={this.props.valueFilter[item.name] || {}}
-            sorter={getSort(this.props.sorters, item.name)}
-            menuLimit={this.props.menuLimit}
-            setValuesInFilter={this.setValuesInFilter.bind(this)}
-            addValuesToFilter={this.addValuesToFilter.bind(this)}
-            moveFilterBoxToTop={this.moveFilterBoxToTop.bind(this)}
-            removeValuesFromFilter={this.removeValuesFromFilter.bind(this)}
-            zIndex={this.state.zIndices[item.name] || this.state.maxZIndex}
-          />
-        ))}
-      </ReactSortable>
-    );
-  }
+  const unusedLength = unusedAttrs.reduce((r, e) => r + e.length, 0);
+  const horizUnused = unusedLength < unusedOrientationCutoff;
 
-  render() {
-    const numValsAllowed =
-      this.props.aggregators[this.props.aggregatorName]([])().numInputs || 0;
+  const colAttrs = cols.filter(e => e && e.trim() !== '' && !hiddenAttributes.includes(e) && !hiddenFromDragDrop.includes(e));
+  const rowAttrs = rows.filter(e => e && e.trim() !== '' && !hiddenAttributes.includes(e) && !hiddenFromDragDrop.includes(e));
 
-    const aggregatorCellOutlet = this.props.aggregators[
-      this.props.aggregatorName
-    ]([])().outlet;
+  // ── Mapa de zona → lista actual ──────────────────────────────────────────────
+  // Para saber a qué lista pertenece cada atributo durante el drag
+  const getZoneOfItem = id => {
+    if (rowAttrs.includes(id)) return 'rows';
+    if (colAttrs.includes(id)) return 'cols';
+    if (unusedAttrs.includes(id)) return 'unused';
+    return null;
+  };
 
-    const rendererName =
-      this.props.rendererName in this.props.renderers
-        ? this.props.rendererName
-        : Object.keys(this.props.renderers)[0];
+  const getListByZone = zone => {
+    if (zone === 'rows') return rowAttrs;
+    if (zone === 'cols') return colAttrs;
+    if (zone === 'unused') return unusedAttrs;
+    return [];
+  };
 
-    const rendererCell = (
-      <td className="pvtRenderers">
-        <Dropdown
-          current={rendererName}
-          values={Object.keys(this.props.renderers)}
-          open={this.isOpen('renderer')}
-          zIndex={this.isOpen('renderer') ? this.state.maxZIndex + 1 : 1}
-          toggle={() =>
-            this.setState({
-              openDropdown: this.isOpen('renderer') ? false : 'renderer',
-            })
-          }
-          setValue={this.propUpdater('rendererName')}
-        />
-      </td>
-    );
+  const getUpdaterByZone = zone => {
+    if (zone === 'rows') return propUpdater('rows');
+    if (zone === 'cols') return propUpdater('cols');
+    if (zone === 'unused') return order => setState(s => ({ ...s, unusedOrder: order }));
+    return () => { };
+  };
 
-    const sortIcons = {
-      key_a_to_z: {
-        rowSymbol: '↕',
-        colSymbol: '↔',
-        next: 'value_a_to_z',
-      },
-      value_a_to_z: {
-        rowSymbol: '↓',
-        colSymbol: '→',
-        next: 'value_z_to_a',
-      },
-      value_z_to_a: {rowSymbol: '↑', colSymbol: '←', next: 'key_a_to_z'},
-    };
+  // ── Sensores dnd-kit ─────────────────────────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
-    const aggregatorCell = (
-      <td className="pvtVals">
-        <Dropdown
-          current={this.props.aggregatorName}
-          values={Object.keys(this.props.aggregators)}
-          open={this.isOpen('aggregators')}
-          zIndex={this.isOpen('aggregators') ? this.state.maxZIndex + 1 : 1}
-          toggle={() =>
-            this.setState({
-              openDropdown: this.isOpen('aggregators') ? false : 'aggregators',
-            })
-          }
-          setValue={this.propUpdater('aggregatorName')}
-        />
-        <a
-          role="button"
-          className="pvtRowOrder"
-          onClick={() =>
-            this.propUpdater('rowOrder')(sortIcons[this.props.rowOrder].next)
-          }
-        >
-          {sortIcons[this.props.rowOrder].rowSymbol}
-        </a>
-        <a
-          role="button"
-          className="pvtColOrder"
-          onClick={() =>
-            this.propUpdater('colOrder')(sortIcons[this.props.colOrder].next)
-          }
-        >
-          {sortIcons[this.props.colOrder].colSymbol}
-        </a>
-        {numValsAllowed > 0 && <br />}
-        {new Array(numValsAllowed).fill().map((n, i) => [
-          <Dropdown
-            key={i}
-            current={this.props.vals[i]}
-            values={Object.keys(this.state.attrValues).filter(
-              e =>
-                !this.props.hiddenAttributes.includes(e) &&
-                !this.props.hiddenFromAggregators.includes(e)
-            )}
-            open={this.isOpen(`val${i}`)}
-            zIndex={this.isOpen(`val${i}`) ? this.state.maxZIndex + 1 : 1}
-            toggle={() =>
-              this.setState({
-                openDropdown: this.isOpen(`val${i}`) ? false : `val${i}`,
-              })
-            }
-            setValue={value =>
-              this.sendPropUpdate({
-                vals: {$splice: [[i, 1, value]]},
-              })
-            }
-          />,
-          i + 1 !== numValsAllowed ? <br key={`br${i}`} /> : null,
-        ])}
-        {aggregatorCellOutlet && aggregatorCellOutlet(this.props.data)}
-      </td>
-    );
+  // ── Handlers de dnd-kit ──────────────────────────────────────────────────────
+  const handleDragStart = ({ active }) => {
+    setActiveId(active.id);
+  };
 
-    const unusedAttrs = Object.keys(this.state.attrValues)
-      .filter(
-        e =>
-          !this.props.rows.includes(e) &&
-          !this.props.cols.includes(e) &&
-          !this.props.hiddenAttributes.includes(e) &&
-          !this.props.hiddenFromDragDrop.includes(e)
-      )
-      .sort(sortAs(this.state.unusedOrder));
+  const handleDragOver = ({ active, over }) => {
+    if (!over) return;
 
-    const unusedLength = unusedAttrs.reduce((r, e) => r + e.length, 0);
-    const horizUnused = unusedLength < this.props.unusedOrientationCutoff;
+    const activeZone = getZoneOfItem(active.id);
+    const overZone = over.data?.current?.sortable?.containerId ?? getZoneOfItem(over.id);
 
-    const unusedAttrsCell = this.makeDnDCell(
-      unusedAttrs,
-      order => this.setState({unusedOrder: order}),
-      `pvtAxisContainer pvtUnused ${
-        horizUnused ? 'pvtHorizList' : 'pvtVertList'
-      }`
-    );
+    // Guardia 1: Ambos deben tener zona y ser distintas
+    if (!activeZone || !overZone || activeZone === overZone) return;
 
-    const colAttrs = this.props.cols.filter(
-      e =>
-        !this.props.hiddenAttributes.includes(e) &&
-        !this.props.hiddenFromDragDrop.includes(e)
-    );
-    const colAttrsCell = this.makeDnDCell(
-      colAttrs,
-      this.propUpdater('cols'),
-      'pvtAxisContainer pvtHorizList pvtCols'
-    );
+    // Mover entre zonas en tiempo real (mientras se arrastra)
+    const activeList = [...getListByZone(activeZone)];
+    const overList = [...getListByZone(overZone)];
 
-    const rowAttrs = this.props.rows.filter(
-      e =>
-        !this.props.hiddenAttributes.includes(e) &&
-        !this.props.hiddenFromDragDrop.includes(e)
-    );
-    const rowAttrsCell = this.makeDnDCell(
-      rowAttrs,
-      this.propUpdater('rows'),
-      'pvtAxisContainer pvtVertList pvtRows'
-    );
+    const activeIndex = activeList.indexOf(active.id);
+    const overIndex = overList.indexOf(over.id);
 
-    const outputCell = (
-      <td className="pvtOutput">
-        <PivotTable
-          {...update(this.props, {
-            data: {$set: this.state.materializedInput},
-          })}
-        />
-        {this.props.pagination &&
-          this.renderFooter(this.state.materializedInput)}
-      </td>
-    );
+    // Guardia 2: El item debe existir en la lista de origen (evita splice -1)
+    if (activeIndex === -1) return;
 
-    if (horizUnused) {
-      return (
-        <table className="pvtUi">
-          <tbody onClick={() => this.setState({openDropdown: false})}>
-            <tr>
-              {rendererCell}
-              {unusedAttrsCell}
-            </tr>
-            <tr>
-              {aggregatorCell}
-              {colAttrsCell}
-            </tr>
-            <tr>
-              {rowAttrsCell}
-              {outputCell}
-            </tr>
-          </tbody>
-        </table>
-      );
+    // Guardia 3: Evitar duplicados en la lista de destino
+    if (overList.includes(active.id)) return;
+
+    activeList.splice(activeIndex, 1);
+    const insertAt = overIndex >= 0 ? overIndex : overList.length;
+    overList.splice(insertAt, 0, active.id);
+
+    // Actualizar ambas listas
+    const updateActiveZone = getUpdaterByZone(activeZone);
+    const updateOverZone = getUpdaterByZone(overZone);
+
+    updateActiveZone(activeList);
+    updateOverZone(overList);
+  };
+
+  const handleDragEnd = ({ active, over }) => {
+    setActiveId(null);
+    if (!over) return;
+
+    const activeZone = getZoneOfItem(active.id);
+    const overZone = over.data?.current?.sortable?.containerId ?? getZoneOfItem(over.id);
+
+    if (!activeZone || !overZone) return;
+
+    if (activeZone === overZone) {
+      // Reordenamiento dentro de la misma zona
+      const list = getListByZone(activeZone);
+      const oldIndex = list.indexOf(active.id);
+      const newIndex = list.indexOf(over.id);
+      if (oldIndex !== newIndex) {
+        getUpdaterByZone(activeZone)(arrayMove(list, oldIndex, newIndex));
+      }
     }
+    // Si activeZone !== overZone, ya fue manejado en handleDragOver
+  };
 
-    return (
-      <table className="pvtUi">
-        <tbody onClick={() => this.setState({openDropdown: false})}>
-          <tr>
-            {rendererCell}
-            {aggregatorCell}
-            {colAttrsCell}
-          </tr>
-          <tr>
-            {unusedAttrsCell}
-            {rowAttrsCell}
-            {outputCell}
-          </tr>
-        </tbody>
-      </table>
-    );
-  }
+  // ── UI ───────────────────────────────────────────────────────────────────────
+  const isOpen = dropdown => state.openDropdown === dropdown;
+  const numValsAllowed = aggregators[aggregatorName]?.([])?.()?.numInputs || 0;
+  const aggregatorCellOutlet = aggregators[aggregatorName]?.([])?.()?.outlet;
+  const actualRendererName = rendererName in renderers ? rendererName : Object.keys(renderers)[0];
 
-  renderFooter(data) {
-    const pivotData = new PivotData({
-      ...this.props,
-      data,
-    });
+  const sortIcons = {
+    key_a_to_z: { rowSymbol: '↕', colSymbol: '↔', next: 'value_a_to_z' },
+    value_a_to_z: { rowSymbol: '↓', colSymbol: '→', next: 'value_z_to_a' },
+    value_z_to_a: { rowSymbol: '↑', colSymbol: '←', next: 'key_a_to_z' },
+  };
+
+  const sharedCellProps = {
+    state,
+    valueFilter,
+    sorters,
+    menuLimit,
+    setValuesInFilter,
+    addValuesToFilter,
+    moveFilterBoxToTop,
+    removeValuesFromFilter,
+  };
+
+  const rendererCell = (
+    <td className="pvtRenderers">
+      <Dropdown
+        current={actualRendererName}
+        values={Object.keys(renderers)}
+        open={isOpen('renderer')}
+        zIndex={isOpen('renderer') ? state.maxZIndex + 1 : 1}
+        toggle={() => setState(s => ({ ...s, openDropdown: isOpen('renderer') ? false : 'renderer' }))}
+        setValue={propUpdater('rendererName')}
+      />
+    </td>
+  );
+
+  const aggregatorCell = (
+    <td className="pvtVals">
+      <Dropdown
+        current={aggregatorName}
+        values={Object.keys(aggregators)}
+        open={isOpen('aggregators')}
+        zIndex={isOpen('aggregators') ? state.maxZIndex + 1 : 1}
+        toggle={() => setState(s => ({ ...s, openDropdown: isOpen('aggregators') ? false : 'aggregators' }))}
+        setValue={propUpdater('aggregatorName')}
+      />
+      <a role="button" className="pvtRowOrder" onClick={() => propUpdater('rowOrder')(sortIcons[rowOrder].next)}>
+        {sortIcons[rowOrder].rowSymbol}
+      </a>
+      <a role="button" className="pvtColOrder" onClick={() => propUpdater('colOrder')(sortIcons[colOrder].next)}>
+        {sortIcons[colOrder].colSymbol}
+      </a>
+      {numValsAllowed > 0 && <br />}
+      {new Array(numValsAllowed).fill(null).map((_, i) => [
+        <Dropdown
+          key={i}
+          current={vals[i]}
+          values={Object.keys(state.attrValues).filter(
+            e => !hiddenAttributes.includes(e) && !hiddenFromAggregators.includes(e)
+          )}
+          open={isOpen(`val${i}`)}
+          zIndex={isOpen(`val${i}`) ? state.maxZIndex + 1 : 1}
+          toggle={() => setState(s => ({ ...s, openDropdown: isOpen(`val${i}`) ? false : `val${i}` }))}
+          setValue={value => sendPropUpdate({ vals: { $splice: [[i, 1, value]] } })}
+        />,
+        i + 1 !== numValsAllowed ? <br key={`br${i}`} /> : null,
+      ])}
+      {aggregatorCellOutlet && aggregatorCellOutlet(data)}
+    </td>
+  );
+
+  const unusedAttrsCell = (
+    <DnDCell
+      id="unused"
+      items={unusedAttrs}
+      classes={`pvtAxisContainer pvtUnused ${horizUnused ? 'pvtHorizList' : 'pvtVertList'}`}
+      isHorizontal={horizUnused}
+      {...sharedCellProps}
+    />
+  );
+
+  const colAttrsCell = (
+    <DnDCell
+      id="cols"
+      items={colAttrs}
+      classes="pvtAxisContainer pvtHorizList pvtCols"
+      isHorizontal
+      {...sharedCellProps}
+    />
+  );
+
+  const rowAttrsCell = (
+    <DnDCell
+      id="rows"
+      items={rowAttrs}
+      classes="pvtAxisContainer pvtVertList pvtRows"
+      isHorizontal={false}
+      {...sharedCellProps}
+    />
+  );
+
+  // Footer de paginación
+  const renderFooter = () => {
+    const pivotData = new PivotData({ ...props, data: state.materializedInput });
     const totalPivotRows = pivotData.getRowKeys().length;
-    const totalRecords = data.length;
-    const totalPages = Math.ceil(totalPivotRows / this.props.pageSize);
+    const totalRecords = state.materializedInput.length;
+    const totalPages = Math.ceil(totalPivotRows / pageSize);
 
     return (
       <div className="pvtFooter">
@@ -630,88 +613,103 @@ class PivotTableUI extends React.PureComponent {
           Total registros: {totalRecords} | Filas: {totalPivotRows}
         </div>
         <div className="pvtFooterPagination">
-          <button
-            className="pvtButton"
-            disabled={this.props.page <= 1}
-            onClick={() => this.propUpdater('page')(1)}
-          >
-            «
-          </button>
-          <button
-            className="pvtButton"
-            disabled={this.props.page <= 1}
-            onClick={() => this.propUpdater('page')(this.props.page - 1)}
-          >
-            ‹
-          </button>
+          <button className="pvtButton" disabled={page <= 1} onClick={() => propUpdater('page')(1)}>«</button>
+          <button className="pvtButton" disabled={page <= 1} onClick={() => propUpdater('page')(page - 1)}>‹</button>
           <span>
             Página{' '}
             <input
               type="number"
               className="pvtPageInput"
-              value={this.props.page}
+              value={page}
               min={1}
               max={totalPages}
               onChange={e => {
                 const val = parseInt(e.target.value, 10);
-                if (val > 0 && val <= totalPages) {
-                  this.propUpdater('page')(val);
-                }
+                if (val > 0 && val <= totalPages) propUpdater('page')(val);
               }}
             />{' '}
             de {totalPages}
           </span>
-          <button
-            className="pvtButton"
-            disabled={this.props.page >= totalPages}
-            onClick={() => this.propUpdater('page')(this.props.page + 1)}
-          >
-            ›
-          </button>
-          <button
-            className="pvtButton"
-            disabled={this.props.page >= totalPages}
-            onClick={() => this.propUpdater('page')(totalPages)}
-          >
-            »
-          </button>
+          <button className="pvtButton" disabled={page >= totalPages} onClick={() => propUpdater('page')(page + 1)}>›</button>
+          <button className="pvtButton" disabled={page >= totalPages} onClick={() => propUpdater('page')(totalPages)}>»</button>
           <select
             className="pvtPageSize"
-            value={this.props.pageSize}
+            value={pageSize}
             onChange={e => {
-              this.sendPropUpdate({
-                pageSize: {$set: parseInt(e.target.value, 10)},
-                page: {$set: 1},
-              });
+              const newSize = parseInt(e.target.value, 10);
+              onChangeRef.current?.(update(props, { pageSize: { $set: newSize }, page: { $set: 1 } }));
             }}
           >
             {[10, 20, 50, 100].map(n => (
-              <option key={n} value={n}>
-                {n} / pág
-              </option>
+              <option key={n} value={n}>{n} / pág</option>
             ))}
           </select>
         </div>
       </div>
     );
-  }
-}
+  };
 
-PivotTableUI.propTypes = Object.assign({}, PivotTable.propTypes, {
+  const outputCell = (
+    <td className="pvtOutput">
+      <PivotTable {...update(props, { data: { $set: state.materializedInput } })} />
+      {pagination && renderFooter()}
+    </td>
+  );
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <table className="pvtUi">
+        <tbody onClick={() => setState(s => ({ ...s, openDropdown: false }))}>
+          {horizUnused ? (
+            <>
+              <tr>{rendererCell}{unusedAttrsCell}</tr>
+              <tr>{aggregatorCell}{colAttrsCell}</tr>
+              <tr>{rowAttrsCell}{outputCell}</tr>
+            </>
+          ) : (
+            <>
+              <tr>{rendererCell}{aggregatorCell}{colAttrsCell}</tr>
+              <tr>{unusedAttrsCell}{rowAttrsCell}{outputCell}</tr>
+            </>
+          )}
+        </tbody>
+      </table>
+
+      {/* Overlay: muestra el atributo mientras se arrastra */}
+      <DragOverlay>
+        {activeId ? (
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            <li>
+              <span className="pvtAttr">{activeId}</span>
+            </li>
+          </ul>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+};
+
+PivotTableUI.propTypes = {
   onChange: PropTypes.func.isRequired,
   hiddenAttributes: PropTypes.arrayOf(PropTypes.string),
   hiddenFromAggregators: PropTypes.arrayOf(PropTypes.string),
   hiddenFromDragDrop: PropTypes.arrayOf(PropTypes.string),
   unusedOrientationCutoff: PropTypes.number,
   menuLimit: PropTypes.number,
-});
+};
 
-PivotTableUI.defaultProps = Object.assign({}, PivotTable.defaultProps, {
+PivotTableUI.defaultProps = {
   hiddenAttributes: [],
   hiddenFromAggregators: [],
   hiddenFromDragDrop: [],
   unusedOrientationCutoff: 85,
   menuLimit: 500,
-});
+};
 
 export default PivotTableUI;
