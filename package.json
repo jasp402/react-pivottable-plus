@@ -30,8 +30,8 @@
     "test:prettier:fix": "prettier  --write \"src/*.js*\"",
     "test:jest": "jest",
     "test": "npm run test:eslint && npm run test:prettier && npm run test:jest",
-    "clean": "rm -rf __tests__ PivotTable.js* PivotTableUI.js* PlotlyRenderers.js* TableRenderers.js* Utilities.js* pivottable.css grouping.css",
-    "build": "npm run clean && cp src/pivottable.css . && cp src/grouping.css . && babel src --out-dir=. --source-maps --presets=@babel/preset-env,@babel/preset-react --plugins=babel-plugin-add-module-exports",
+    "clean": "shx rm -rf __tests__ PivotTable.js* PivotTableUI.js* PlotlyRenderers.js* TableRenderers.js* Utilities.js* pivottable.css grouping.css",
+    "build": "npm run clean && shx cp src/pivottable.css . && shx cp src/grouping.css . && babel src --out-dir=. --source-maps --presets=@babel/preset-env,@babel/preset-react --plugins=babel-plugin-add-module-exports",
     "build:examples": "vite build",
     "doPublish": "npm run build && npm publish",
     "postpublish": "npm run clean"
@@ -94,6 +94,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-plotly.js": "^2.6.0",
+    "rimraf": "^6.1.3",
+    "shx": "^0.4.0",
     "tailwindcss": "^4.0.0",
     "vite": "^5.1.4"
   }
