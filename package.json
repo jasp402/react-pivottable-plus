@@ -1,6 +1,6 @@
 {
   "name": "react-pivottable-plus",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "A React-based pivot table with grouping and modern UI (Tailwind, Radix, Shadcn)",
   "main": "PivotTableUI.js",
@@ -11,6 +11,8 @@
     "TableRenderers.js",
     "SubtotalsRenderers.js",
     "Utilities.js",
+    "renderers/",
+    "hooks/",
     "PivotTable.js.map",
     "PivotTableUI.js.map",
     "PlotlyRenderers.js.map",
@@ -29,7 +31,7 @@
     "test:jest": "jest",
     "test": "npm run test:eslint && npm run test:prettier && npm run test:jest",
     "clean": "rm -rf __tests__ PivotTable.js* PivotTableUI.js* PlotlyRenderers.js* TableRenderers.js* Utilities.js* pivottable.css grouping.css",
-    "build": "npm run clean && cp src/pivottable.css . && cp src/grouping.css . && babel src --out-dir=. --source-maps --presets=env,react --plugins babel-plugin-add-module-exports",
+    "build": "npm run clean && cp src/pivottable.css . && cp src/grouping.css . && babel src --out-dir=. --source-maps --presets=@babel/preset-env,@babel/preset-react --plugins=babel-plugin-add-module-exports",
     "build:examples": "vite build",
     "doPublish": "npm run build && npm publish",
     "postpublish": "npm run clean"
@@ -78,6 +80,7 @@
     "react-dom": ">=19.0.0"
   },
   "devDependencies": {
+    "@babel/cli": "^7.28.6",
     "@babel/core": "^7.24.0",
     "@babel/preset-env": "^7.24.0",
     "@babel/preset-react": "^7.24.0",
@@ -85,6 +88,7 @@
     "@vitejs/plugin-react": "^5.1.4",
     "autoprefixer": "^10.4.18",
     "babel-loader": "^9.1.3",
+    "babel-plugin-add-module-exports": "^1.0.4",
     "postcss": "^8.4.35",
     "prettier": "^3.2.5",
     "react": "^19.0.0",
