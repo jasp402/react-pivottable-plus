@@ -1,8 +1,8 @@
 {
-  "name": "react-pivottable-grouping",
+  "name": "react-pivottable-plus",
   "version": "0.1.0",
   "type": "module",
-  "description": "A React-based pivot table with grouping",
+  "description": "A React-based pivot table with grouping and modern UI (Tailwind, Radix, Shadcn)",
   "main": "PivotTableUI.js",
   "files": [
     "PivotTable.js",
@@ -36,18 +36,23 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jjagielka/react-pivottable-grouping.git"
+    "url": "git+https://github.com/jasp402/react-pivottable-plus.git"
   },
   "keywords": [
     "react",
-    "pivottable"
+    "pivottable",
+    "grouping",
+    "subtotals",
+    "tailwind",
+    "radix-ui",
+    "shadcn"
   ],
-  "author": "Jakub Jagielka <jjagielka@gmail.com>",
+  "author": "JASP4 <https://github.com/jasp402>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jjagielka/react-pivottable-grouping/issues"
+    "url": "https://github.com/jasp402/react-pivottable-plus/issues"
   },
-  "homepage": "https://github.com/jjagielka/react-pivottable-grouping#readme",
+  "homepage": "https://github.com/jasp402/react-pivottable-plus#readme",
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",

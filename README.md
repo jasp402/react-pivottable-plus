@@ -1,6 +1,6 @@
 # react-pivottable-plus
 
-`react-pivottable-plus` es una versión moderna y extendida de [react-pivottable](https://github.com/plotly/react-pivottable), actualizada para los estándares actuales de desarrollo web y con una interfaz de usuario significativamente mejorada.
+`react-pivottable-plus` es una versión moderna y extendida de [react-pivottable-grouping](https://github.com/jjagielka/react-pivottable-grouping) (a su vez un fork de [react-pivottable](https://github.com/plotly/react-pivottable)), actualizada para los estándares actuales de desarrollo web y con una interfaz de usuario significativamente mejorada.
 
 Esta biblioteca permite la exploración y el análisis de datos mediante el resumen de un conjunto de datos en una tabla dinámica con una interfaz de arrastrar y soltar (drag'n'drop) intuitiva.
 
