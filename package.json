@@ -1,6 +1,6 @@
 {
   "name": "react-pivottable-plus",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "A React-based pivot table with grouping and modern UI (Tailwind, Radix, Shadcn)",
   "main": "dist/PivotTableUI.js",
   "module": "dist/PivotTableUI.js",
@@ -35,9 +35,9 @@
     "build:examples": "vite build",
     "doPublish": "npm run build && npm publish",
     "postpublish": "npm run clean",
-    "bump": "node scripts/bump-version.js patch",
-    "bump:minor": "node scripts/bump-version.js minor",
-    "bump:major": "node scripts/bump-version.js major",
+    "bump": "node scripts/bump-version.mjs patch",
+    "bump:minor": "node scripts/bump-version.mjs minor",
+    "bump:major": "node scripts/bump-version.mjs major",
     "docs:dev": "cd docs && next dev -p 3001",
     "docs:build": "cd docs && npm run build",
     "release": "npm run bump && git add package.json && git commit -m \"chore: bump version\" && git push origin master"
