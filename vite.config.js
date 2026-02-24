@@ -5,7 +5,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/react-pivottable-plus/',
+  base: process.env.NODE_ENV === 'production' ? '/react-pivottable-plus/' : '/',
   root: 'examples',
   resolve: {
     alias: {

@@ -88,12 +88,9 @@ export function usePivot(initialProps) {
             newProps.rows = prev.rows.filter(r => !finalValue.includes(r));
         }
 
-        // Programar el onChange en un microtask o después del renderizado para evitar el warning de Gallery
-        setTimeout(() => {
-            if (initialPropsRef.current.onChange) {
-                initialPropsRef.current.onChange(newProps);
-            }
-        }, 0);
+        if (initialPropsRef.current.onChange) {
+            initialPropsRef.current.onChange(newProps);
+        }
 
         return newProps;
     });
@@ -110,9 +107,7 @@ export function usePivot(initialProps) {
         const newValueFilter = { ...prev.valueFilter, [attribute]: filter };
         const newProps = { ...prev, valueFilter: newValueFilter };
         
-        setTimeout(() => {
-            if (initialPropsRef.current.onChange) initialPropsRef.current.onChange(newProps);
-        }, 0);
+        if (initialPropsRef.current.onChange) initialPropsRef.current.onChange(newProps);
 
         return newProps;
     });
@@ -126,9 +121,7 @@ export function usePivot(initialProps) {
           }, {});
           const newProps = { ...prev, valueFilter: { ...prev.valueFilter, [attribute]: newFilter } };
           
-          setTimeout(() => {
-            if (initialPropsRef.current.onChange) initialPropsRef.current.onChange(newProps);
-          }, 0);
+          if (initialPropsRef.current.onChange) initialPropsRef.current.onChange(newProps);
 
           return newProps;
       });

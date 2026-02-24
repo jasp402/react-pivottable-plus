@@ -29,20 +29,22 @@ Incluye soporte nativo para la agrupación de filas y columnas con cálculo auto
 npm install --save react-pivottable-plus react react-dom
 ```
 
-## 🛠️ Uso Básico
+## 🛠️ Uso Básico (Zero Config)
+
+Gracias a las últimas optimizaciones, implementar la tabla dinámica es más sencillo que nunca. La mayoría de las propiedades ya tienen valores por defecto inteligentes.
 
 ```jsx
 import React, { useState } from 'react';
-import PivotTableUI from 'react-pivottable-plus/PivotTableUI';
+import PivotTableUI from 'react-pivottable-plus'; // Importación directa
 import 'react-pivottable-plus/pivottable.css';
 
 const data = [
   { producto: "Manzana", categoria: "Fruta", ventas: 100 },
   { producto: "Pera", categoria: "Fruta", ventas: 150 },
-  // ... más datos
 ];
 
 function App() {
+  // Solo necesitas gestionar el estado si quieres persistir la configuración
   const [state, setState] = useState({});
   
   return (
@@ -55,36 +57,33 @@ function App() {
 }
 ```
 
-## 🌈 Uso de Renderizadores Modernos (Tailwind / Shadcn / Radix)
+## 🌈 Uso de Renderizadores Modernos
 
-Para utilizar las nuevas interfaces, importa el renderizador correspondiente desde la carpeta de renderers:
+La librería incluye renderizadores premium listos para usar. No necesitas configurarlos manualmente, solo indica el nombre si ya los has incluido en el objeto `renderers`, o pásalos directamente:
 
 ```jsx
 import { TailwindUI } from 'react-pivottable-plus/renderers/TailwindUI';
-// O bien:
-// import { ShadcnDashboardUI } from 'react-pivottable-plus/renderers/ShadcnDashboardUI';
-// import { RadixUI } from 'react-pivottable-plus/renderers/RadixUI';
 
 // En tu componente:
 <PivotTableUI
   data={data}
-  rendererName="Table" // o el nombre que prefieras
-  renderers={{ Table: TailwindUI }}
+  renderers={{ Table: TailwindUI }} // Sobrescribe el renderizador por defecto
   {...state}
 />
 ```
 
-## 📑 Propiedades Principales
+## 📑 Propiedades Principales (Todas Opcionales)
 
-| Propiedad | Tipo | Descripción |
-| :--- | :--- | :--- |
-| `data` | Array / Object | Los datos a resumir (formato JSON o Array de Arrays). |
-| `rows` | Array | Atributos para las filas. |
-| `cols` | Array | Atributos para las columnas. |
-| `vals` | Array | Atributos para los valores calculados. |
-| `pagination` | Boolean | Activa/Desactiva el pie de página con paginación. |
-| `pageSize` | Number | Cantidad de registros por página (Default: 20). |
-| `hiddenAttributes` | Array | Atributos que no se mostrarán en la UI. |
+| Propiedad | Tipo | Por Defecto | Descripción |
+| :--- | :--- | :--- | :--- |
+| `data` | Array / Object | `[]` | Los datos a resumir. |
+| `rows` | Array | `[]` | Atributos para las filas. |
+| `cols` | Array | `[]` | Atributos para las columnas. |
+| `vals` | Array | `[]` | Atributos para los valores calculados. |
+| `aggregatorName` | String | `"Count"` | Nombre del agregador inicial. |
+| `rendererName` | String | `"Table"` | Nombre del renderizador inicial. |
+| `pagination` | Boolean | `false` | Activa el pie de página con paginación. |
+| `pageSize` | Number | `20` | Cantidad de registros por página. |
 
 ---
 
