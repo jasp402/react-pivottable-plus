@@ -17,7 +17,7 @@ yarn.lock
 /pivottable.css
 
 # Reglas de Gemini CLI
-GEMINI.md
+# GEMINI.md (Ya no se ignora para que Gemini pueda leerlo)
 
 # Documentation Site Artifacts
 docs/node_modules
