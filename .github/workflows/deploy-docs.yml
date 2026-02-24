@@ -31,7 +31,7 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install dependencies (Root & Docs)
+      - name: Install dependencies
         run: |
           npm install
           cd docs
@@ -39,18 +39,45 @@ jobs:
 
       - name: Build Examples (Vite)
         run: npm run build:examples
+        env:
+          NODE_ENV: production
 
       - name: Build Documentation (Nextra)
         run: npm run docs:build
+        env:
+          NODE_ENV: production
 
-      - name: Combine Artifacts
+      - name: Combine and Sanitize Artifacts
         run: |
-          # El sitio de Nextra es la base
+          # 1. Limpiar sitio final
+          rm -rf final-site
           mkdir -p final-site
-          cp -r docs/out/* final-site/
-          # Los ejemplos de Vite se mueven a /examples/gallery
+          
+          # 2. Desplegar Documentación en la RAÍZ
+          # Si Next.js usó basePath, los archivos están en out/react-pivottable-plus
+          if [ -d "docs/out/react-pivottable-plus" ]; then
+            echo "Detectada estructura Next.js con basePath. Moviendo a raíz..."
+            cp -r docs/out/react-pivottable-plus/* final-site/
+          else
+            echo "Detectada estructura Next.js estándar. Copiando a raíz..."
+            cp -r docs/out/* final-site/
+          fi
+          
+          # 3. Desplegar Laboratorio de Interfaces en SUBFOLDER
           mkdir -p final-site/examples/gallery
-          cp -r dist-examples/* final-site/examples/gallery/
+          if [ -d "dist-examples" ]; then
+            echo "Integrando Laboratorio de Interfaces..."
+            cp -r dist-examples/* final-site/examples/gallery/
+          else
+            echo "Error: dist-examples no encontrado"
+            exit 1
+          fi
+          
+          # 4. Verificación de integridad
+          if [ ! -f "final-site/index.html" ]; then
+            echo "Error Crítico: No se generó index.html en la raíz del sitio"
+            exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

@@ -5,7 +5,8 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: process.env.NODE_ENV === 'production' ? '/react-pivottable-plus/' : '/',
+  // Aseguramos que los ejemplos funcionen en su subcarpeta dedicada
+  base: process.env.NODE_ENV === 'production' ? '/react-pivottable-plus/examples/gallery/' : '/',
   root: 'examples',
   resolve: {
     alias: {
@@ -14,6 +15,7 @@ export default defineConfig({
   },
   build: {
     outDir: '../dist-examples',
+    emptyOutDir: true,
   },
   server: {
     port: 3000,
