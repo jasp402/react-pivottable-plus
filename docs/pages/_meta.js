@@ -5,7 +5,7 @@ export default {
     display: 'hidden'
   },
   docs: {
-    title: 'Documentación',
+    title: 'DocumentaciÃ³n',
     type: 'page'
   },
   examples: {

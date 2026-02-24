@@ -1,3 +1,3 @@
 export default {
-  'get-started': 'Introducción'
+  'get-started': 'IntroducciÃ³n'
 }
