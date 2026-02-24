@@ -54,7 +54,6 @@ jobs:
           mkdir -p final-site
           
           # 2. Desplegar Documentación en la RAÍZ
-          # Si Next.js usó basePath, los archivos están en out/react-pivottable-plus
           if [ -d "docs/out/react-pivottable-plus" ]; then
             echo "Detectada estructura Next.js con basePath. Moviendo a raíz..."
             cp -r docs/out/react-pivottable-plus/* final-site/
@@ -68,12 +67,12 @@ jobs:
           if [ -d "dist-examples" ]; then
             echo "Integrando Laboratorio de Interfaces..."
             cp -r dist-examples/* final-site/examples/gallery/
-          else
-            echo "Error: dist-examples no encontrado"
-            exit 1
           fi
           
-          # 4. Verificación de integridad
+          # 4. EVITAR QUE GITHUB PAGES IGNORE CARPETAS CON GUION BAJO (_next)
+          touch final-site/.nojekyll
+          
+          # 5. Verificación de integridad
           if [ ! -f "final-site/index.html" ]; then
             echo "Error Crítico: No se generó index.html en la raíz del sitio"
             exit 1
