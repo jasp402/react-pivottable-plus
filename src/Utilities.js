@@ -535,7 +535,13 @@ Data Model class
 
 class PivotData {
   constructor(inputProps = {}) {
-    this.props = Object.assign({}, PivotData.defaultProps, inputProps);
+    const sanitizedProps = Object.keys(inputProps).reduce((acc, key) => {
+      if (inputProps[key] !== undefined) {
+        acc[key] = inputProps[key];
+      }
+      return acc;
+    }, {});
+    this.props = Object.assign({}, PivotData.defaultProps, sanitizedProps);
     PropTypes.checkPropTypes(
       PivotData.propTypes,
       this.props,

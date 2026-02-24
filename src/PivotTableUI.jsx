@@ -467,8 +467,33 @@ const PivotTableUI = props => {
     state, valueFilter, sorters, menuLimit, setValuesInFilter, addValuesToFilter, moveFilterBoxToTop, removeValuesFromFilter,
   };
 
+  const componentProps = {
+    data: state.materializedInput,
+    onChange,
+    rows,
+    cols,
+    vals,
+    aggregatorName,
+    aggregators,
+    rendererName,
+    renderers,
+    valueFilter,
+    sorters,
+    menuLimit,
+    unusedOrientationCutoff,
+    hiddenAttributes,
+    hiddenFromAggregators,
+    hiddenFromDragDrop,
+    pagination,
+    page,
+    pageSize,
+    rowOrder,
+    colOrder,
+    derivedAttributes,
+  };
+
   const renderFooter = () => {
-    const pivotData = new PivotData({ ...props, data: state.materializedInput });
+    const pivotData = new PivotData(componentProps);
     const totalPivotRows = pivotData.getRowKeys().length;
     const totalRecords = state.materializedInput.length;
     const totalPages = Math.ceil(totalPivotRows / pageSize);
@@ -520,7 +545,7 @@ const PivotTableUI = props => {
               <tr>
                 <DnDCell id="rows" items={rowAttrs} classes="pvtAxisContainer pvtVertList pvtRows" isHorizontal={false} {...sharedCellProps} />
                 <td className="pvtOutput">
-                  <PivotTable {...update(props, { data: { $set: state.materializedInput } })} />
+                  <PivotTable {...componentProps} />
                   {pagination && renderFooter()}
                 </td>
               </tr>
@@ -547,7 +572,7 @@ const PivotTableUI = props => {
                 <DnDCell id="unused" items={unusedAttrs} classes={`pvtAxisContainer pvtUnused pvtVertList`} isHorizontal={false} {...sharedCellProps} />
                 <DnDCell id="rows" items={rowAttrs} classes="pvtAxisContainer pvtVertList pvtRows" isHorizontal={false} {...sharedCellProps} />
                 <td className="pvtOutput">
-                  <PivotTable {...update(props, { data: { $set: state.materializedInput } })} />
+                  <PivotTable {...componentProps} />
                   {pagination && renderFooter()}
                 </td>
               </tr>

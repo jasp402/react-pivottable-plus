@@ -2,6 +2,13 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { PivotData } from '../Utilities';
 
 export function usePivot(initialProps) {
+  const sanitizedInitialProps = Object.keys(initialProps).reduce((acc, key) => {
+    if (initialProps[key] !== undefined) {
+      acc[key] = initialProps[key];
+    }
+    return acc;
+  }, {});
+
   // Mantener una referencia a las props iniciales para evitar cierres de ámbito (closures) obsoletos
   const initialPropsRef = useRef(initialProps);
   useEffect(() => {
@@ -26,7 +33,7 @@ export function usePivot(initialProps) {
     pagination: false,
     pageSize: 20,
     page: 1,
-    ...initialProps
+    ...sanitizedInitialProps
   });
 
   const [state, setState] = useState({
@@ -37,7 +44,13 @@ export function usePivot(initialProps) {
 
   // Sincronizar props internas cuando cambian las externas, pero sin disparar onChange de vuelta
   useEffect(() => {
-    setProps(prev => ({ ...prev, ...initialProps }));
+    const sanitizedSync = Object.keys(initialProps).reduce((acc, key) => {
+      if (initialProps[key] !== undefined) {
+        acc[key] = initialProps[key];
+      }
+      return acc;
+    }, {});
+    setProps(prev => ({ ...prev, ...sanitizedSync }));
   }, [initialProps.data, initialProps.rows, initialProps.cols, initialProps.rendererName, initialProps.aggregatorName, initialProps.page, initialProps.pageSize]);
 
   // Materializar la entrada
