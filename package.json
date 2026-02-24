@@ -37,7 +37,9 @@
     "postpublish": "npm run clean",
     "bump": "node scripts/bump-version.js patch",
     "bump:minor": "node scripts/bump-version.js minor",
-    "bump:major": "node scripts/bump-version.js major"
+    "bump:major": "node scripts/bump-version.js major",
+    "docs:dev": "cd docs && next dev -p 3001",
+    "docs:build": "cd docs && npm run build"
   },
   "repository": {
     "type": "git",
@@ -72,6 +74,8 @@
     "clsx": "^2.1.1",
     "immutability-helper": "^2.3.1",
     "lucide-react": "^0.575.0",
+    "nextra": "^3.3.1",
+    "nextra-theme-docs": "^3.3.1",
     "prop-types": "^15.8.1",
     "react-draggable": "^4.4.6",
     "react-sortablejs": "^6.1.4",

@@ -1,27 +1,27 @@
 # react-pivottable-plus
 
-`react-pivottable-plus` es una versión moderna y extendida de [react-pivottable-grouping](https://github.com/jjagielka/react-pivottable-grouping) (a su vez un fork de [react-pivottable](https://github.com/plotly/react-pivottable)), actualizada para los estándares actuales de desarrollo web y con una interfaz de usuario significativamente mejorada.
+[![NPM Version](https://img.shields.io/npm/v/react-pivottable-plus.svg)](https://www.npmjs.com/package/react-pivottable-plus)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![React 19](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
 
-Esta biblioteca permite la exploración y el análisis de datos mediante el resumen de un conjunto de datos en una tabla dinámica con una interfaz de arrastrar y soltar (drag'n'drop) intuitiva.
+**La solución definitiva de Tablas Dinámicas para el ecosistema moderno de React.**
 
-## 🚀 Novedades y Mejoras
+`react-pivottable-plus` es una versión premium y mantenida de `react-pivottable`, rediseñada para ofrecer una experiencia de usuario excepcional con soporte nativo para Tailwind CSS, Radix UI y Shadcn.
 
-### ⚛️ Soporte para React 19
-Totalmente compatible con **React 19**, aprovechando las últimas mejoras de rendimiento y estabilidad del ecosistema.
+## 🌐 Enlaces Rápidos
 
-### 🎨 Interfaces de Usuario Modernas
-Se han incluido renderizadores de alta calidad basados en frameworks modernos:
-- **Tailwind CSS**: Una interfaz limpia, moderna y altamente personalizable.
-- **Shadcn/UI**: Diseño profesional basado en componentes de Radix UI y Tailwind.
-- **Radix UI**: Soporte nativo para componentes accesibles y robustos.
+- 📚 **[Documentación Oficial](https://jasp402.github.io/react-pivottable-plus/)**
+- 🚀 **[Guía de Inicio Rápido](https://jasp402.github.io/react-pivottable-plus/docs/get-started)**
+- 🎨 **[Galería de Interfaces](https://jasp402.github.io/react-pivottable-plus/examples/gallery)**
 
-### 📊 Paginación y Totalización (Nuevo Footer)
-Se ha añadido un pie de página inteligente que incluye:
-- **Paginación avanzada**: Control de página actual y tamaño de página (registros por página).
-- **Totalización**: Visualización en tiempo real del total de registros procesados y el total de filas resultantes en la tabla dinámica.
+## 🚀 Por qué elegir esta versión?
 
-### 📉 Agrupación y Subtotales
-Incluye soporte nativo para la agrupación de filas y columnas con cálculo automático de **subtotales**, permitiendo colapsar y expandir secciones para un análisis de datos más profundo.
+A diferencia de otros forks estancados, `react-pivottable-plus` ofrece:
+
+- **Soporte React 19**: Construido sobre los estándares más recientes.
+- **UI de Próxima Generación**: Renderizadores modernos integrados.
+- **Paginación Inteligente**: Rendimiento fluido con grandes conjuntos de datos.
+- **Configuración Cero**: Implementación en segundos con valores por defecto robustos.
 
 ## 📦 Instalación
 

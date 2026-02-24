@@ -18,3 +18,10 @@ yarn.lock
 
 # Reglas de Gemini CLI
 GEMINI.md
+
+# Documentation Site Artifacts
+docs/node_modules
+docs/.next
+docs/out
+docs/.swc
+docs/package-lock.json

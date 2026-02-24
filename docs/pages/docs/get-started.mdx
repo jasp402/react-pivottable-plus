@@ -1,0 +1,38 @@
+# Introducción
+
+¡Bienvenido a **react-pivottable-plus**! 
+
+Esta es la solución definitiva para el análisis exploratorio de datos en aplicaciones modernas de React. Olvídate de las tablas estáticas; dales a tus usuarios la libertad de analizar datos con una interfaz de clase mundial.
+
+## Instalación
+
+Instala la librería y sus dependencias principales:
+
+```bash
+npm install react-pivottable-plus react react-dom
+```
+
+## Uso Rápido
+
+La librería está diseñada para funcionar con la mínima configuración posible:
+
+```jsx
+import PivotTableUI from 'react-pivottable-plus';
+import 'react-pivottable-plus/pivottable.css';
+
+const data = [
+  { producto: "Laptop", ventas: 1500 },
+  { producto: "Monitor", ventas: 300 }
+];
+
+function App() {
+  const [state, setState] = React.useState({});
+  return (
+    <PivotTableUI
+      data={data}
+      onChange={s => setState(s)}
+      {...state}
+    />
+  );
+}
+```
