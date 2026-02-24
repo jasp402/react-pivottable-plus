@@ -1,33 +1,65 @@
-name: Deploy Documentation
+name: Deploy Premium Site
 
 on:
   push:
     branches:
       - master
-    paths:
-      - "docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Install dependencies
+          cache: "npm"
+
+      - name: Install dependencies (Root & Docs)
         run: |
+          npm install
           cd docs
           npm install
-      - name: Build
+
+      - name: Build Examples (Vite)
+        run: npm run build:examples
+
+      - name: Build Documentation (Nextra)
+        run: npm run docs:build
+
+      - name: Combine Artifacts
         run: |
-          cd docs
-          npm run build
+          # El sitio de Nextra es la base
+          mkdir -p final-site
+          cp -r docs/out/* final-site/
+          # Los ejemplos de Vite se mueven a /examples/gallery
+          mkdir -p final-site/examples/gallery
+          cp -r dist-examples/* final-site/examples/gallery/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs/out
+          path: './final-site'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
