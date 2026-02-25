@@ -1,154 +1,74 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { PivotData } from '../Utilities';
+import { useRef, useSyncExternalStore, useCallback, useEffect } from 'react';
+import { PivotEngine } from '../core/PivotEngine';
+import { FilterModule } from '../modules/FilterModule';
+import { PaginationModule } from '../modules/PaginationModule';
+import { SortModule } from '../modules/SortModule';
 
+/**
+ * usePivot — Hook de backward compatibility.
+ * Internamente delega al nuevo PivotEngine con módulos por defecto.
+ * Mantiene la API original: { props, state, actions }
+ */
 export function usePivot(initialProps) {
-  const sanitizedInitialProps = Object.keys(initialProps).reduce((acc, key) => {
-    if (initialProps[key] !== undefined) {
-      acc[key] = initialProps[key];
-    }
-    return acc;
-  }, {});
+  const engineRef = useRef(null);
 
-  // Mantener una referencia a las props iniciales para evitar cierres de ámbito (closures) obsoletos
-  const initialPropsRef = useRef(initialProps);
+  if (!engineRef.current) {
+    engineRef.current = new PivotEngine({
+      ...initialProps,
+      modules: [FilterModule, PaginationModule, SortModule],
+    });
+  }
+
+  // Sincronizar props externas clave
   useEffect(() => {
-    initialPropsRef.current = initialProps;
-  }, [initialProps]);
-
-  const [props, setProps] = useState({
-    data: [],
-    rows: [],
-    cols: [],
-    vals: [],
-    rowOrder: 'key_a_to_z',
-    colOrder: 'key_a_to_z',
-    aggregatorName: 'Count',
-    rendererName: 'Table',
-    valueFilter: {},
-    sorters: {},
-    derivedAttributes: {},
-    hiddenAttributes: [],
-    hiddenFromAggregators: [],
-    hiddenFromDragDrop: [],
-    pagination: false,
-    pageSize: 20,
-    page: 1,
-    ...sanitizedInitialProps
-  });
-
-  const [state, setState] = useState({
-    attrValues: {},
-    materializedInput: [],
-    unusedOrder: []
-  });
-
-  // Sincronizar props internas cuando cambian las externas, pero sin disparar onChange de vuelta
-  useEffect(() => {
-    const sanitizedSync = Object.keys(initialProps).reduce((acc, key) => {
+    const sanitized = {};
+    const allKeys = Object.keys(initialProps);
+    for (const key of allKeys) {
       if (initialProps[key] !== undefined) {
-        acc[key] = initialProps[key];
+        sanitized[key] = initialProps[key];
       }
-      return acc;
-    }, {});
-    setProps(prev => ({ ...prev, ...sanitizedSync }));
-  }, [initialProps.data, initialProps.rows, initialProps.cols, initialProps.rendererName, initialProps.aggregatorName, initialProps.page, initialProps.pageSize]);
+    }
+    engineRef.current.stateManager.updateConfig(sanitized);
+    engineRef.current._notifyStateChanged();
+  }, [
+    initialProps.data,
+    initialProps.rows,
+    initialProps.cols,
+    initialProps.rendererName,
+    initialProps.aggregatorName,
+    initialProps.page,
+    initialProps.pageSize,
+  ]);
 
-  // Materializar la entrada
-  useEffect(() => {
-    const materializedInput = [];
-    const attrValues = {};
-    let recordsProcessed = 0;
-
-    PivotData.forEachRecord(
-      props.data,
-      props.derivedAttributes,
-      function(record) {
-        materializedInput.push(record);
-        for (const attr of Object.keys(record)) {
-          if (!(attr in attrValues)) {
-            attrValues[attr] = {};
-            if (recordsProcessed > 0) {
-              attrValues[attr].null = recordsProcessed;
-            }
-          }
-        }
-        for (const attr in attrValues) {
-          const value = attr in record ? record[attr] : 'null';
-          if (!(value in attrValues[attr])) {
-            attrValues[attr][value] = 0;
-          }
-          attrValues[attr][value]++;
-        }
-        recordsProcessed++;
-      }
-    );
-
-    setState(s => ({ ...s, attrValues, materializedInput }));
-  }, [props.data, props.derivedAttributes]);
-
-  const updateProp = useCallback((key, value) => {
-    setProps(prev => {
-        let finalValue = value;
-        if (Array.isArray(value) && (key === 'rows' || key === 'cols' || key === 'vals')) {
-            finalValue = value.filter(v => v && v.trim() !== '');
-        }
-
-        const newProps = { ...prev, [key]: finalValue };
-        
-        if (key === 'rows') {
-            newProps.cols = prev.cols.filter(c => !finalValue.includes(c));
-        } else if (key === 'cols') {
-            newProps.rows = prev.rows.filter(r => !finalValue.includes(r));
-        }
-
-        if (initialPropsRef.current.onChange) {
-            initialPropsRef.current.onChange(newProps);
-        }
-
-        return newProps;
-    });
-  }, []);
-
-  const toggleFilter = useCallback((attribute, value) => {
-    setProps(prev => {
-        const filter = { ...prev.valueFilter[attribute] };
-        if (value in filter) {
-            delete filter[value];
-        } else {
-            filter[value] = true;
-        }
-        const newValueFilter = { ...prev.valueFilter, [attribute]: filter };
-        const newProps = { ...prev, valueFilter: newValueFilter };
-        
-        if (initialPropsRef.current.onChange) initialPropsRef.current.onChange(newProps);
-
-        return newProps;
-    });
-  }, []);
-
-  const setValuesInFilter = useCallback((attribute, values) => {
-      setProps(prev => {
-          const newFilter = values.reduce((r, v) => {
-              r[v] = true;
-              return r;
-          }, {});
-          const newProps = { ...prev, valueFilter: { ...prev.valueFilter, [attribute]: newFilter } };
-          
-          if (initialPropsRef.current.onChange) initialPropsRef.current.onChange(newProps);
-
-          return newProps;
-      });
-  }, []);
+  // Suscribirse a cambios del engine
+  const snapshot = useSyncExternalStore(
+    useCallback((onStoreChange) => engineRef.current.subscribe(onStoreChange), []),
+    useCallback(() => engineRef.current.getSnapshot(), [])
+  );
 
   return {
-    props,
-    state,
+    props: snapshot.props,
+    state: snapshot.state,
     actions: {
-        setProps,
-        updateProp,
-        toggleFilter,
-        setValuesInFilter,
-        setUnusedOrder: (order) => setState(s => ({ ...s, unusedOrder: order }))
-    }
+      setProps: (newProps) => engineRef.current.gridApi.updateConfig(newProps),
+      updateProp: (key, value) => {
+        if (key === 'rows') {
+          engineRef.current.gridApi.setRows(value);
+        } else if (key === 'cols') {
+          engineRef.current.gridApi.setCols(value);
+        } else {
+          engineRef.current.gridApi.updateConfig({ [key]: value });
+        }
+      },
+      toggleFilter: (attr, value) => engineRef.current.gridApi.toggleFilter(attr, value),
+      setValuesInFilter: (attr, values) => engineRef.current.gridApi.setFilter(attr, values),
+      addValuesToFilter: (attr, values) => engineRef.current.gridApi.addValuesToFilter(attr, values),
+      removeValuesFromFilter: (attr, values) => engineRef.current.gridApi.removeValuesFromFilter(attr, values),
+      setUnusedOrder: (order) => engineRef.current.gridApi.setUnusedOrder(order),
+    },
+    // Nuevo: exponer gridApi y columnApi
+    gridApi: engineRef.current.gridApi,
+    columnApi: engineRef.current.columnApi,
+    core: engineRef.current, // Backward compat
   };
 }

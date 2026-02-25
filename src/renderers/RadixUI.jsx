@@ -279,7 +279,7 @@ export function RadixUI(props) {
                 </div>
 
                 {/* Table Output */}
-                <div className={`pvtUi pvtSize-${pivotProps.size || 'lg'} flex-1 w-full p-4 bg-slate-50/30 overflow-auto`}>
+                <div className={`pvtUi pvt-theme-${pivotProps.theme || 'default'} pvt-size-${pivotProps.size || 'lg'} flex-1 w-full p-4 bg-slate-50/30 overflow-auto`}>
                     <PivotTable {...pivotProps} data={pivotState.materializedInput} />
                 </div>
             </div>

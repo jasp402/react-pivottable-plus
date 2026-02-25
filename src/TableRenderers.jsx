@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { PivotData } from './Utilities';
+import { CellPipeline } from './core/CellPipeline';
+import { VirtualScroller } from './core/VirtualScroller';
 
 // helper function for setting row/col-span in pivotTableRenderer
 const spanSize = function (arr, i, j, no_loop = false) {
@@ -69,6 +71,24 @@ function makeRenderer(opts = {}) {
       let colKeys = pivotData.getColKeys(true);
       const grandTotalAggregator = pivotData.getAggregator([], []);
 
+      // ─── Cell Pipeline ────────────────────────────────────────────────
+      const pipeline = this.props.cellPipeline
+        ? new CellPipeline(this.props.cellPipeline)
+        : CellPipeline.default();
+
+      // ─── Virtualización ───────────────────────────────────────────────
+      const virtConfig = this.props.virtualization || {};
+      const scroller = new VirtualScroller({
+        enabled: virtConfig.enabled !== undefined ? virtConfig.enabled : false,
+        rowHeight: virtConfig.rowHeight || 32,
+        colWidth: virtConfig.colWidth || 100,
+        overscanRows: virtConfig.overscanRows || 5,
+        overscanCols: virtConfig.overscanCols || 3,
+        containerHeight: virtConfig.containerHeight || 400,
+        containerWidth: virtConfig.containerWidth || 800,
+        threshold: virtConfig.threshold || 100,
+      });
+
       const grouping = pivotData.props.grouping;
       const compactRows = grouping && this.props.compactRows;
       // speacial case for spanSize counting (no_loop)
@@ -84,6 +104,10 @@ function makeRenderer(opts = {}) {
         }
       }
 
+      // Guardar todos los colKeys para totales (SIEMPRE calcula sobre todo)
+      const allColKeys = colKeys;
+      const allRowKeys = rowKeys;
+
       const totalRows = rowKeys.length;
       let startOffset = 0;
       if (this.props.pagination) {
@@ -92,7 +116,38 @@ function makeRenderer(opts = {}) {
         const end = start + this.props.pageSize;
         rowKeys = rowKeys.slice(start, end);
       }
+
+      // Aplicar virtualización bidireccional
+      const shouldVirt = scroller.shouldVirtualize(rowKeys.length, colKeys.length);
+      const scrollTop = (this.state || {}).scrollTop || 0;
+      const scrollLeft = (this.state || {}).scrollLeft || 0;
+
+      let visibleRowKeys = rowKeys;
+      let rowTopPad = 0;
+      let rowBottomPad = 0;
+      let virtualRowStartOffset = 0;
+
+      if (shouldVirt.rows) {
+        const rowRange = scroller.getVisibleRowRange(scrollTop, rowKeys.length);
+        visibleRowKeys = rowKeys.slice(rowRange.startIndex, rowRange.endIndex + 1);
+        rowTopPad = rowRange.topPadding;
+        rowBottomPad = rowRange.bottomPadding;
+        virtualRowStartOffset = rowRange.startIndex;
+      }
+
+      let visibleColKeys = colKeys;
+      let colLeftPad = 0;
+      let colRightPad = 0;
+
+      if (shouldVirt.cols) {
+        const colRange = scroller.getVisibleColRange(scrollLeft, colKeys.length);
+        visibleColKeys = colKeys.slice(colRange.startIndex, colRange.endIndex + 1);
+        colLeftPad = colRange.leftPadding;
+        colRightPad = colRange.rightPadding;
+      }
+
       const showRowNumbers = this.props.showRowNumbers !== false;
+      const isVirtualized = shouldVirt.rows || shouldVirt.cols;
 
       let valueCellColors = () => { };
       let rowTotalColors = () => { };
@@ -167,12 +222,20 @@ function makeRenderer(opts = {}) {
       const rbClass = grouping ? this.props.rowGroupBefore ? "rowGroupBefore" : "rowGroupAfter" : "";
       const cbClass = grouping ? this.props.colGroupBefore ? "colGroupBefore" : "colGroupAfter" : "";
       const clickClass = (pred, closed) => pred ? " pvtClickable" + (closed ? " closed" : "") : "";
-      return (
+      // ─── Render de la tabla ────────────────────────────────────────────
+      const handleScroll = isVirtualized ? (e) => {
+        this.setState({
+          scrollTop: e.currentTarget.scrollTop,
+          scrollLeft: e.currentTarget.scrollLeft,
+        });
+      } : null;
+
+      const tableContent = (
         <table id={id} className={`pvtTable ${rbClass} ${cbClass}`}>
           <thead>
             {colAttrs.map(function (c, j) {
               const clickable = grouping && colAttrs.length > j + 1;
-              const levelKeys = colKeys.filter(x => x.length === j + 1);
+              const levelKeys = allColKeys.filter(x => x.length === j + 1);
               return (
                 <tr key={`colAttr${j}`}>
                   {showRowNumbers && j === 0 && (
@@ -184,8 +247,11 @@ function makeRenderer(opts = {}) {
                   <th className={"pvtAxisLabel" + clickClass(clickable, isFolded(levelKeys))}
                     onClick={clickable ? _ => fold(levelKeys) : null}
                   >{c}</th>
-                  {colKeys.map(function (colKey, i) {
-                    const x = spanSize(colKeys, i, j);
+                  {shouldVirt.cols && colLeftPad > 0 && j === 0 && (
+                    <th key="col-pad-left" style={{ minWidth: colLeftPad }} />
+                  )}
+                  {visibleColKeys.map(function (colKey, i) {
+                    const x = spanSize(visibleColKeys, i, j);
                     if (x === -1) {
                       return null;
                     }
@@ -205,6 +271,9 @@ function makeRenderer(opts = {}) {
                       </th>
                     );
                   })}
+                  {shouldVirt.cols && colRightPad > 0 && j === 0 && (
+                    <th key="col-pad-right" style={{ minWidth: colRightPad }} />
+                  )}
 
                   {j === 0 && (
                     <th
@@ -227,7 +296,7 @@ function makeRenderer(opts = {}) {
                 )}
                 {rowAttrs.map(function (r, i) {
                   const clickable = grouping && rowAttrs.length > i + 1;
-                  const levelKeys = rowKeys.filter(x => x.length === i + 1);
+                  const levelKeys = allRowKeys.filter(x => x.length === i + 1);
                   return (
                     <th className={"pvtAxisLabel" + clickClass(clickable, isFolded(levelKeys))}
                       onClick={clickable ? _ => fold(levelKeys) : null}
@@ -244,28 +313,37 @@ function makeRenderer(opts = {}) {
           </thead>
 
           <tbody>
-            {rowKeys.map(function (rowKey, i) {
+            {/* Spacer top para virtualización de filas */}
+            {shouldVirt.rows && rowTopPad > 0 && (
+              <tr key="virt-top-spacer" style={{ height: rowTopPad }}>
+                <td colSpan={999} />
+              </tr>
+            )}
+
+            {visibleRowKeys.map(function (rowKey, localI) {
+              const globalI = shouldVirt.rows ? virtualRowStartOffset + localI : localI;
               const totalAggregator = pivotData.getAggregator(rowKey, []);
               const rowGap = rowAttrs.length - rowKey.length;
-              const rowTotalValue = totalAggregator.value();
+              const rowTotalResult = pipeline.processTotal({ aggregator: totalAggregator, rowKey, type: 'row' });
               return (
-                <tr key={`rowKeyRow${i}`}
-                  className={(rowGap ? "pvtLevel" + rowGap : "pvtData") + " pvtRow-data"}>
+                <tr key={`rowKeyRow${globalI}`}
+                  className={(rowGap ? "pvtLevel" + rowGap : "pvtData") + " pvtRow-data"}
+                  style={shouldVirt.rows ? { height: scroller.rowHeight } : undefined}>
                   {showRowNumbers && (
-                    <th className="pvtRowNumber">{startOffset + i + 1}</th>
+                    <th className="pvtRowNumber">{startOffset + globalI + 1}</th>
                   )}
                   {rowKey.map(function (txt, j) {
                     if (compactRows && j < rowKey.length - 1) {
                       return null;
                     }
                     const clickable = grouping && rowAttrs.length > j + 1;
-                    const x = compactRows ? 1 : spanSize(rowKeys, i, j, specialCase);
+                    const x = compactRows ? 1 : spanSize(visibleRowKeys, localI, j, specialCase);
                     if (x === -1) {
                       return null;
                     }
                     return (
                       <th
-                        key={`rowKeyLabel-${i}-${j}-${txt}`}
+                        key={`rowKeyLabel-${globalI}-${j}-${txt}`}
                         className={"pvtRowLabel" + clickClass(clickable && rowKey[j], isFolded([rowKey.slice(0, j + 1)]))}
                         rowSpan={x}
                         colSpan={
@@ -286,54 +364,70 @@ function makeRenderer(opts = {}) {
                     ? <th className="pvtRowLabel" colSpan={rowGap + 1}>{"Total (" + rowKey[rowKey.length - 1] + ")"}</th>
                     : null
                   }
-                  {colKeys.map(function (colKey, j) {
+                  {/* Spacer left para virtualización de columnas */}
+                  {shouldVirt.cols && colLeftPad > 0 && (
+                    <td key="col-pad-left" style={{ minWidth: colLeftPad }} />
+                  )}
+                  {visibleColKeys.map(function (colKey, j) {
                     const aggregator = pivotData.getAggregator(rowKey, colKey);
                     const colGap = colAttrs.length - colKey.length;
-                    const val = aggregator.value();
-                    const isNumeric = typeof val === 'number';
+                    const cellResult = pipeline.process({ aggregator, rowKey, colKey, pivotData });
+                    const isNumeric = typeof cellResult.value === 'number';
+                    const mergedStyle = {
+                      ...valueCellColors(rowKey, colKey, cellResult.value),
+                      ...(cellResult.style || {}),
+                    };
                     return (
                       <td
-                        className={"pvtVal" + (colGap ? " pvtLevel" + colGap : "") + (isNumeric ? " pvtVal-numeric" : "")}
-                        key={`pvtVal${i}-${j}`}
+                        className={"pvtVal" + (colGap ? " pvtLevel" + colGap : "") + (isNumeric ? " pvtVal-numeric" : "") + (cellResult.className ? " " + cellResult.className : "")}
+                        key={`pvtVal${globalI}-${j}`}
                         onClick={
                           getClickHandler &&
-                          getClickHandler(val, rowKey, colKey)
+                          getClickHandler(cellResult.value, rowKey, colKey)
                         }
-                        style={valueCellColors(
-                          rowKey,
-                          colKey,
-                          val
-                        )}
+                        style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                       >
-                        {aggregator.format(val)}
+                        {cellResult.rendered}
                       </td>
                     );
                   })}
+                  {/* Spacer right para virtualización de columnas */}
+                  {shouldVirt.cols && colRightPad > 0 && (
+                    <td key="col-pad-right" style={{ minWidth: colRightPad }} />
+                  )}
                   <td
-                    className={"pvtTotal" + (typeof rowTotalValue === 'number' ? " pvtVal-numeric" : "")}
+                    className={"pvtTotal" + (typeof rowTotalResult.value === 'number' ? " pvtVal-numeric" : "")}
                     onClick={
                       getClickHandler &&
-                      getClickHandler(rowTotalValue, rowKey, [null])
+                      getClickHandler(rowTotalResult.value, rowKey, [null])
                     }
-                    style={colTotalColors(rowTotalValue)}
+                    style={colTotalColors(rowTotalResult.value) || rowTotalResult.style}
                   >
-                    {totalAggregator.format(rowTotalValue)}
+                    {rowTotalResult.rendered}
                   </td>
                 </tr>
               );
             })}
 
-            {showRowNumbers && this.props.pagination && rowKeys.length < this.props.pageSize && (
-              Array.from({ length: this.props.pageSize - rowKeys.length }).map((_, padIdx) => (
+            {/* Spacer bottom para virtualización de filas */}
+            {shouldVirt.rows && rowBottomPad > 0 && (
+              <tr key="virt-bottom-spacer" style={{ height: rowBottomPad }}>
+                <td colSpan={999} />
+              </tr>
+            )}
+
+            {showRowNumbers && this.props.pagination && visibleRowKeys.length < this.props.pageSize && !shouldVirt.rows && (
+              Array.from({ length: this.props.pageSize - visibleRowKeys.length }).map((_, padIdx) => (
                 <tr key={`padRow${padIdx}`} className="pvtRow-data pvtEmptyRow">
-                  <th className="pvtRowNumber">{startOffset + rowKeys.length + padIdx + 1}</th>
+                  <th className="pvtRowNumber">{startOffset + visibleRowKeys.length + padIdx + 1}</th>
                   <th className="pvtRowLabel" colSpan={rowAttrs.length + (colAttrs.length === 0 ? 0 : 1)}></th>
-                  {colKeys.map((colKey, j) => <td key={`padVal${padIdx}-${j}`} className="pvtVal pvtEmptyCell"></td>)}
+                  {visibleColKeys.map((colKey, j) => <td key={`padVal${padIdx}-${j}`} className="pvtVal pvtEmptyCell"></td>)}
                   <td className="pvtTotal pvtEmptyCell"></td>
                 </tr>
               ))
             )}
 
+            {/* Totals row — siempre calcula sobre TODOS los datos */}
             <tr className="pvtTotalRow">
               {showRowNumbers && <th className="pvtTotalLabel"></th>}
               <th
@@ -343,7 +437,10 @@ function makeRenderer(opts = {}) {
                 Totals
               </th>
 
-              {colKeys.map(function (colKey, i) {
+              {shouldVirt.cols && colLeftPad > 0 && (
+                <td key="total-col-pad-left" style={{ minWidth: colLeftPad }} />
+              )}
+              {visibleColKeys.map(function (colKey, i) {
                 const totalAggregator = pivotData.getAggregator([], colKey);
                 const colGap = colAttrs.length - colKey.length;
                 const totalVal = totalAggregator.value();
@@ -362,6 +459,9 @@ function makeRenderer(opts = {}) {
                   </td>
                 );
               })}
+              {shouldVirt.cols && colRightPad > 0 && (
+                <td key="total-col-pad-right" style={{ minWidth: colRightPad }} />
+              )}
 
               <td
                 onClick={
@@ -376,6 +476,26 @@ function makeRenderer(opts = {}) {
           </tbody>
         </table>
       );
+
+      // Wrappear en container con scroll si virtualización está activa
+      if (isVirtualized) {
+        return (
+          <div
+            className="pvtVirtualContainer"
+            style={{
+              maxHeight: scroller.containerHeight,
+              maxWidth: scroller.containerWidth,
+              overflow: 'auto',
+              position: 'relative',
+            }}
+            onScroll={handleScroll}
+          >
+            {tableContent}
+          </div>
+        );
+      }
+
+      return tableContent;
     }
   }
 

@@ -66,12 +66,51 @@ const Gallery = () => {
     aggregators: aggregators,
     plotlyOptions: { width: 900, height: 500 },
     plotlyConfig: {},
-    size: 'lg'
+  });
+
+  const [uiConfig, setUiConfig] = useState({
+    size: 'lg',
+    enableCellPipeline: false,
+    enableVirtualization: false,
   });
 
   const renderActiveUI = () => {
+    // ─── Cell Pipeline: formateo y estilos condicionales ───
+    const cellPipelineConfig = uiConfig.enableCellPipeline ? {
+      valueFormatter: ({ value, aggregator }) => {
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'number') {
+          return value >= 1000
+            ? `$${(value / 1000).toFixed(1)}K`
+            : `$${value.toFixed(2)}`;
+        }
+        return aggregator.format(value);
+      },
+      cellStyle: ({ value }) => {
+        if (typeof value !== 'number') return null;
+        if (value > 10) return { backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#16a34a', fontWeight: 600 };
+        if (value < 2) return { backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#dc2626' };
+        return null;
+      },
+    } : undefined;
+
+    // ─── Virtualización bidireccional ───
+    const virtConfig = uiConfig.enableVirtualization ? {
+      enabled: true,
+      rowHeight: 32,
+      colWidth: 100,
+      containerHeight: 400,
+      containerWidth: 900,
+      threshold: 15, // bajo para la demo con pocos datos
+      overscanRows: 3,
+      overscanCols: 2,
+    } : undefined;
+
     const commonProps = {
       ...pivotState,
+      size: uiConfig.size,
+      cellPipeline: cellPipelineConfig,
+      virtualization: virtConfig,
       onChange: setPivotState
     };
 
@@ -101,8 +140,8 @@ const Gallery = () => {
               key={ui.id}
               onClick={() => setActiveUI(ui.id)}
               className={`w-full flex items-start gap-4 p-4 rounded-2xl transition-all border-2 text-left group ${activeUI === ui.id
-                  ? 'bg-white border-blue-500 shadow-lg scale-[1.02]'
-                  : 'bg-transparent border-transparent hover:bg-slate-50 text-slate-500'
+                ? 'bg-white border-blue-500 shadow-lg scale-[1.02]'
+                : 'bg-transparent border-transparent hover:bg-slate-50 text-slate-500'
                 }`}
             >
               <div className={`p-2 rounded-xl text-white shadow-md transition-transform group-hover:rotate-6 ${ui.color}`}>
@@ -137,12 +176,33 @@ const Gallery = () => {
                 </span>
               </div>
             </div>
-            <div className="flex items-center">
-              <span className="text-xl mr-2" title="Configurar Tamaño de Tabla">⚙️</span>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 bg-white px-3 py-2 border border-slate-200 rounded-lg shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={uiConfig.enableCellPipeline}
+                  onChange={e => setUiConfig({ ...uiConfig, enableCellPipeline: e.target.checked })}
+                  className="w-4 h-4 text-green-500 rounded border-slate-300 focus:ring-green-500"
+                />
+                🎨 Cell Pipeline
+              </label>
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 bg-white px-3 py-2 border border-slate-200 rounded-lg shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={uiConfig.enableVirtualization}
+                  onChange={e => setUiConfig({ ...uiConfig, enableVirtualization: e.target.checked })}
+                  className="w-4 h-4 text-blue-500 rounded border-slate-300 focus:ring-blue-500"
+                />
+                ⚡ Virtualización
+              </label>
+
+              <div className="w-px h-8 bg-slate-200 mx-2"></div>
+
+              <span className="text-xl" title="Configurar Tamaño de Tabla">⚙️</span>
               <select
-                value={pivotState.size}
-                onChange={e => setPivotState({ ...pivotState, size: e.target.value })}
-                className="p-2 rounded-lg border border-slate-200 text-slate-700 bg-white text-sm outline-none shadow-sm font-medium"
+                value={uiConfig.size}
+                onChange={e => setUiConfig({ ...uiConfig, size: e.target.value })}
+                className="p-2 rounded-lg border border-slate-200 text-slate-700 bg-white text-sm outline-none shadow-sm font-semibold hover:bg-slate-50 cursor-pointer"
               >
                 <option value="lg">Tamaño: Large (100%)</option>
                 <option value="md">Tamaño: Medium (85%)</option>

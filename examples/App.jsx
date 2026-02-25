@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import tips from './tips';
 import { sortAs } from '../src/Utilities';
 import SubtotalRenderers from '../src/SubtotalRenderers';
@@ -64,6 +64,37 @@ class PivotTableUISmartWrapper extends React.PureComponent {
     }
 
     render() {
+        // ─── Cell Pipeline: formateo y estilos condicionales ───
+        const cellPipelineConfig = this.props.enableCellPipeline ? {
+            valueFormatter: ({ value, aggregator }) => {
+                if (value === null || value === undefined) return '';
+                if (typeof value === 'number') {
+                    return value >= 1000
+                        ? `$${(value / 1000).toFixed(1)}K`
+                        : `$${value.toFixed(2)}`;
+                }
+                return aggregator.format(value);
+            },
+            cellStyle: ({ value }) => {
+                if (typeof value !== 'number') return null;
+                if (value > 10) return { backgroundColor: 'rgba(34, 197, 94, 0.15)', color: '#16a34a', fontWeight: 600 };
+                if (value < 2) return { backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#dc2626' };
+                return null;
+            },
+        } : undefined;
+
+        // ─── Virtualización bidireccional ───
+        const virtConfig = this.props.enableVirtualization ? {
+            enabled: true,
+            rowHeight: 32,
+            colWidth: 100,
+            containerHeight: 400,
+            containerWidth: 900,
+            threshold: 15, // bajo para la demo con pocos datos
+            overscanRows: 3,
+            overscanCols: 2,
+        } : undefined;
+
         return (
             <PivotTableUI
                 renderers={Object.assign(
@@ -74,7 +105,8 @@ class PivotTableUISmartWrapper extends React.PureComponent {
                 )}
                 {...this.state.pivotState}
                 size={this.props.size}
-                // onChange={s => this.setState({pivotState: s}))}
+                cellPipeline={cellPipelineConfig}
+                virtualization={virtConfig}
                 unusedOrientationCutoff={Infinity}
             />
         );
@@ -87,6 +119,8 @@ export default class App extends React.Component {
             mode: 'demo',
             filename: 'Sample Dataset: Tips',
             size: 'lg',
+            enableCellPipeline: false,
+            enableVirtualization: false,
             pivotState: {
                 data: tips,
                 rows: ['Day of Week', 'Party Size'],
@@ -197,8 +231,26 @@ export default class App extends React.Component {
                 </div>
                 <div className="row" style={{ position: 'relative' }}>
                     <h2 className="text-center">{this.state.filename}</h2>
-                    <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', alignItems: 'center', zIndex: 10 }}>
-                        <span style={{ fontSize: '20px', marginRight: '8px' }} title="Table Size Configuration">⚙️</span>
+                    <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', alignItems: 'center', gap: '12px', zIndex: 10 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500, color: '#475569', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={this.state.enableCellPipeline}
+                                onChange={e => this.setState({ enableCellPipeline: e.target.checked })}
+                                style={{ accentColor: '#22c55e' }}
+                            />
+                            🎨 Cell Pipeline
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500, color: '#475569', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={this.state.enableVirtualization}
+                                onChange={e => this.setState({ enableVirtualization: e.target.checked })}
+                                style={{ accentColor: '#3b82f6' }}
+                            />
+                            ⚡ Virtualización
+                        </label>
+                        <span style={{ fontSize: '20px', marginRight: '4px' }} title="Table Size Configuration">⚙️</span>
                         <select
                             value={this.state.size || 'lg'}
                             onChange={e => this.setState({ size: e.target.value })}
@@ -218,6 +270,8 @@ export default class App extends React.Component {
                 <div className="row">
                     <PivotTableUISmartWrapper
                         size={this.state.size}
+                        enableCellPipeline={this.state.enableCellPipeline}
+                        enableVirtualization={this.state.enableVirtualization}
                         {...this.state.pivotState}
                         onChange={s => this.setState({ pivotState: s })}
                     />

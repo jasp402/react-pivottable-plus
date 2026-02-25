@@ -1,6 +1,6 @@
 {
   "name": "react-pivottable-plus",
-  "version": "1.0.14",
+  "version": "1.0.16",
   "description": "A React-based pivot table with grouping and modern UI (Tailwind, Radix, Shadcn)",
   "main": "dist/PivotTableUI.js",
   "module": "dist/PivotTableUI.js",
@@ -13,6 +13,9 @@
     "./SubtotalRenderers": "./dist/SubtotalRenderers.js",
     "./renderers/*": "./dist/renderers/*.js",
     "./hooks/*": "./dist/hooks/*.js",
+    "./core/*": "./dist/core/*.js",
+    "./modules/*": "./dist/modules/*.js",
+    "./react/*": "./dist/react/*.js",
     "./pivottable.css": "./pivottable.css",
     "./grouping.css": "./grouping.css"
   },
@@ -73,7 +76,6 @@
     "@radix-ui/react-slot": "^1.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "immutability-helper": "^2.3.1",
     "lucide-react": "^0.575.0",
     "nextra": "^3.3.1",
     "nextra-theme-docs": "^3.3.1",

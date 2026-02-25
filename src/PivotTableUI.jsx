@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import update from 'immutability-helper';
 import { PivotData, sortAs, getSort, aggregators as defaultAggregators } from './Utilities';
 import PivotTable from './PivotTable';
 import TableRenderers from './TableRenderers';
+import { usePivot } from './hooks/usePivot';
 import Draggable from 'react-draggable';
 
 import {
@@ -272,9 +272,28 @@ const DnDCell = ({
 };
 
 const PivotTableUI = props => {
+  // ─── Headless Core: toda la lógica de datos y props fluye a través del Core ───
+  const { props: pivotProps, state: pivotState, actions } = usePivot(props);
+
+  // ─── Estado local solo para UI (no pertenece al Core) ─────────────────────────
+  const [uiState, setUiState] = useState({
+    zIndices: {},
+    maxZIndex: 1000,
+    openDropdown: false,
+  });
+  const [activeId, setActiveId] = useState(null);
+
+  // ─── Helpers de UI local ──────────────────────────────────────────────────────
+  const moveFilterBoxToTop = useCallback(attribute => {
+    setUiState(s => ({
+      ...s,
+      maxZIndex: s.maxZIndex + 1,
+      zIndices: { ...s.zIndices, [attribute]: s.maxZIndex + 1 },
+    }));
+  }, []);
+
+  // ─── Derivados desde el Core ──────────────────────────────────────────────────
   const {
-    data = [],
-    onChange = () => { },
     rows = [],
     cols = [],
     vals = [],
@@ -294,102 +313,12 @@ const PivotTableUI = props => {
     pageSize = 20,
     rowOrder = 'key_a_to_z',
     colOrder = 'key_a_to_z',
-    derivedAttributes = {},
     size = 'lg',
-  } = props;
+  } = pivotProps;
 
-  const [state, setState] = useState({
-    unusedOrder: [],
-    zIndices: {},
-    maxZIndex: 1000,
-    openDropdown: false,
-    attrValues: {},
-    materializedInput: [],
-    data: null,
-  });
-
-  const [activeId, setActiveId] = useState(null);
-
-  useEffect(() => {
-    if (state.data === data) return;
-    const newState = { data, attrValues: {}, materializedInput: [] };
-    let recordsProcessed = 0;
-    PivotData.forEachRecord(data, derivedAttributes, record => {
-      newState.materializedInput.push(record);
-      for (const attr of Object.keys(record)) {
-        if (!(attr in newState.attrValues)) {
-          newState.attrValues[attr] = {};
-          if (recordsProcessed > 0) newState.attrValues[attr].null = recordsProcessed;
-        }
-      }
-      for (const attr in newState.attrValues) {
-        const value = attr in record ? record[attr] : 'null';
-        if (!(value in newState.attrValues[attr])) newState.attrValues[attr][value] = 0;
-        newState.attrValues[attr][value]++;
-      }
-      recordsProcessed++;
-    });
-    setState(s => ({ ...s, ...newState }));
-  }, [data, derivedAttributes, state.data]);
-
-  const sendPropUpdate = useCallback(command => {
-    const newProps = update(props, command);
-    if (onChange) onChange(newProps);
-  }, [props, onChange]);
-
-  const handleDuplicates = (newAttrs, existingAttrs) => {
-    if (!newAttrs || !existingAttrs) return existingAttrs || [];
-    const dups = newAttrs.filter(item => existingAttrs.includes(item));
-    return dups.length > 0 ? existingAttrs.filter(item => !dups.includes(item)) : existingAttrs;
-  };
-
-  const propUpdater = useCallback(key => value => {
-    const updateObj = { [key]: { $set: value } };
-    if (key === 'rows') {
-      const updatedCols = handleDuplicates(value, cols);
-      if (updatedCols.length !== cols.length) updateObj.cols = { $set: updatedCols };
-    } else if (key === 'cols') {
-      const updatedRows = handleDuplicates(value, rows);
-      if (updatedRows.length !== rows.length) updateObj.rows = { $set: updatedRows };
-    }
-    sendPropUpdate(updateObj);
-  }, [cols, rows, sendPropUpdate]);
-
-  const setValuesInFilter = useCallback((attribute, values) => {
-    sendPropUpdate({
-      valueFilter: {
-        [attribute]: { $set: values.reduce((r, v) => { r[v] = true; return r; }, {}) },
-      },
-    });
-  }, [sendPropUpdate]);
-
-  const addValuesToFilter = useCallback((attribute, values) => {
-    if (attribute in valueFilter) {
-      sendPropUpdate({
-        valueFilter: {
-          [attribute]: values.reduce((r, v) => { r[v] = { $set: true }; return r; }, {}),
-        },
-      });
-    } else {
-      setValuesInFilter(attribute, values);
-    }
-  }, [sendPropUpdate, valueFilter, setValuesInFilter]);
-
-  const removeValuesFromFilter = useCallback((attribute, values) => {
-    sendPropUpdate({ valueFilter: { [attribute]: { $unset: values } } });
-  }, [sendPropUpdate]);
-
-  const moveFilterBoxToTop = useCallback(attribute => {
-    setState(s => ({
-      ...s,
-      maxZIndex: s.maxZIndex + 1,
-      zIndices: { ...s.zIndices, [attribute]: s.maxZIndex + 1 },
-    }));
-  }, []);
-
-  const unusedAttrs = Object.keys(state.attrValues)
+  const unusedAttrs = Object.keys(pivotState.attrValues)
     .filter(e => e && e.trim() !== '' && !rows.includes(e) && !cols.includes(e) && !hiddenAttributes.includes(e) && !hiddenFromDragDrop.includes(e))
-    .sort(sortAs(state.unusedOrder));
+    .sort(sortAs(pivotState.unusedOrder || []));
 
   const unusedLength = unusedAttrs.reduce((r, e) => r + e.length, 0);
   const horizUnused = unusedLength < unusedOrientationCutoff;
@@ -397,6 +326,7 @@ const PivotTableUI = props => {
   const colAttrs = cols.filter(e => e && e.trim() !== '' && !hiddenAttributes.includes(e) && !hiddenFromDragDrop.includes(e));
   const rowAttrs = rows.filter(e => e && e.trim() !== '' && !hiddenAttributes.includes(e) && !hiddenFromDragDrop.includes(e));
 
+  // ─── DnD Zones ────────────────────────────────────────────────────────────────
   const getZoneOfItem = id => {
     if (rowAttrs.includes(id)) return 'rows';
     if (colAttrs.includes(id)) return 'cols';
@@ -412,9 +342,9 @@ const PivotTableUI = props => {
   };
 
   const getUpdaterByZone = zone => {
-    if (zone === 'rows') return propUpdater('rows');
-    if (zone === 'cols') return propUpdater('cols');
-    if (zone === 'unused') return order => setState(s => ({ ...s, unusedOrder: order }));
+    if (zone === 'rows') return value => actions.updateProp('rows', value);
+    if (zone === 'cols') return value => actions.updateProp('cols', value);
+    if (zone === 'unused') return order => actions.setUnusedOrder(order);
     return () => { };
   };
 
@@ -454,7 +384,8 @@ const PivotTableUI = props => {
     }
   };
 
-  const isOpen = dropdown => state.openDropdown === dropdown;
+  // ─── Dropdowns y controles ────────────────────────────────────────────────────
+  const isOpen = dropdown => uiState.openDropdown === dropdown;
   const numValsAllowed = (aggregators[aggregatorName]?.([])?.()?.numInputs) || 0;
   const actualRendererName = (rendererName in renderers) ? rendererName : Object.keys(renderers)[0];
 
@@ -464,13 +395,26 @@ const PivotTableUI = props => {
     value_z_to_a: { rowSymbol: '↑', colSymbol: '←', next: 'key_a_to_z' },
   };
 
+  // Estado combinado para DnDCell (necesita zIndices del UI local + attrValues del Core)
+  const combinedState = {
+    attrValues: pivotState.attrValues,
+    zIndices: uiState.zIndices,
+    maxZIndex: uiState.maxZIndex,
+  };
+
   const sharedCellProps = {
-    state, valueFilter, sorters, menuLimit, setValuesInFilter, addValuesToFilter, moveFilterBoxToTop, removeValuesFromFilter,
+    state: combinedState,
+    valueFilter,
+    sorters,
+    menuLimit,
+    setValuesInFilter: actions.setValuesInFilter,
+    addValuesToFilter: actions.addValuesToFilter,
+    moveFilterBoxToTop,
+    removeValuesFromFilter: actions.removeValuesFromFilter,
   };
 
   const componentProps = {
-    data: state.materializedInput,
-    onChange,
+    data: pivotState.materializedInput,
     rows,
     cols,
     vals,
@@ -490,28 +434,31 @@ const PivotTableUI = props => {
     pageSize,
     rowOrder,
     colOrder,
-    derivedAttributes,
+    derivedAttributes: pivotProps.derivedAttributes,
+    cellPipeline: pivotProps.cellPipeline,
+    virtualization: pivotProps.virtualization,
   };
 
   const renderFooter = () => {
     const pivotData = new PivotData(componentProps);
     const totalPivotRows = pivotData.getRowKeys().length;
-    const totalRecords = state.materializedInput.length;
+    const totalRecords = pivotState.materializedInput.length;
     const totalPages = Math.ceil(totalPivotRows / pageSize);
     return (
       <div className="pvtFooter">
         <div className="pvtFooterInfo">Total registros: {totalRecords} | Filas: {totalPivotRows}</div>
         <div className="pvtFooterPagination">
-          <button className="pvtButton" disabled={page <= 1} onClick={() => propUpdater('page')(1)}>«</button>
-          <button className="pvtButton" disabled={page <= 1} onClick={() => propUpdater('page')(page - 1)}>‹</button>
+          <button className="pvtButton" disabled={page <= 1} onClick={() => actions.updateProp('page', 1)}>«</button>
+          <button className="pvtButton" disabled={page <= 1} onClick={() => actions.updateProp('page', page - 1)}>‹</button>
           <span>Página <input type="number" className="pvtPageInput" value={page} min={1} max={totalPages} onChange={e => {
             const val = parseInt(e.target.value, 10);
-            if (val > 0 && val <= totalPages) propUpdater('page')(val);
+            if (val > 0 && val <= totalPages) actions.updateProp('page', val);
           }} /> de {totalPages}</span>
-          <button className="pvtButton" disabled={page >= totalPages} onClick={() => propUpdater('page')(page + 1)}>›</button>
-          <button className="pvtButton" disabled={page >= totalPages} onClick={() => propUpdater('page')(totalPages)}>»</button>
+          <button className="pvtButton" disabled={page >= totalPages} onClick={() => actions.updateProp('page', page + 1)}>›</button>
+          <button className="pvtButton" disabled={page >= totalPages} onClick={() => actions.updateProp('page', totalPages)}>»</button>
           <select className="pvtPageSize" value={pageSize} onChange={e => {
-            sendPropUpdate({ pageSize: { $set: parseInt(e.target.value, 10) }, page: { $set: 1 } });
+            actions.updateProp('pageSize', parseInt(e.target.value, 10));
+            actions.updateProp('page', 1);
           }}>{[10, 20, 50, 100].map(n => <option key={n} value={n}>{n} / pág</option>)}</select>
         </div>
       </div>
@@ -520,24 +467,24 @@ const PivotTableUI = props => {
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-      <table className={`pvtUi pvtSize-${size}`}>
-        <tbody onClick={() => setState(s => ({ ...s, openDropdown: false }))}>
+      <table className={`pvtUi pvt-theme-${props.theme || 'default'} pvt-size-${size || 'lg'}`}>
+        <tbody onClick={() => setUiState(s => ({ ...s, openDropdown: false }))}>
           {horizUnused ? (
             <>
               <tr>
                 <td className="pvtRenderers">
-                  <Dropdown current={actualRendererName} values={Object.keys(renderers)} open={isOpen('renderer')} zIndex={isOpen('renderer') ? state.maxZIndex + 1 : 1} toggle={() => setState(s => ({ ...s, openDropdown: isOpen('renderer') ? false : 'renderer' }))} setValue={propUpdater('rendererName')} />
+                  <Dropdown current={actualRendererName} values={Object.keys(renderers)} open={isOpen('renderer')} zIndex={isOpen('renderer') ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('renderer') ? false : 'renderer' }))} setValue={v => actions.updateProp('rendererName', v)} />
                 </td>
                 <DnDCell id="unused" items={unusedAttrs} classes={`pvtAxisContainer pvtUnused pvtHorizList`} isHorizontal={true} {...sharedCellProps} />
               </tr>
               <tr>
                 <td className="pvtVals">
-                  <Dropdown current={aggregatorName} values={Object.keys(aggregators)} open={isOpen('aggregators')} zIndex={isOpen('aggregators') ? state.maxZIndex + 1 : 1} toggle={() => setState(s => ({ ...s, openDropdown: isOpen('aggregators') ? false : 'aggregators' }))} setValue={propUpdater('aggregatorName')} />
-                  <a role="button" className="pvtRowOrder" onClick={() => propUpdater('rowOrder')(sortIcons[rowOrder].next)}>{sortIcons[rowOrder].rowSymbol}</a>
-                  <a role="button" className="pvtColOrder" onClick={() => propUpdater('colOrder')(sortIcons[colOrder].next)}>{sortIcons[colOrder].colSymbol}</a>
+                  <Dropdown current={aggregatorName} values={Object.keys(aggregators)} open={isOpen('aggregators')} zIndex={isOpen('aggregators') ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('aggregators') ? false : 'aggregators' }))} setValue={v => actions.updateProp('aggregatorName', v)} />
+                  <a role="button" className="pvtRowOrder" onClick={() => actions.updateProp('rowOrder', sortIcons[rowOrder].next)}>{sortIcons[rowOrder].rowSymbol}</a>
+                  <a role="button" className="pvtColOrder" onClick={() => actions.updateProp('colOrder', sortIcons[colOrder].next)}>{sortIcons[colOrder].colSymbol}</a>
                   {numValsAllowed > 0 && <br />}
                   {new Array(numValsAllowed).fill(null).map((_, i) => [
-                    <Dropdown key={i} current={vals[i]} values={Object.keys(state.attrValues).filter(e => !hiddenAttributes.includes(e) && !hiddenFromAggregators.includes(e))} open={isOpen(`val${i}`)} zIndex={isOpen(`val${i}`) ? state.maxZIndex + 1 : 1} toggle={() => setState(s => ({ ...s, openDropdown: isOpen(`val${i}`) ? false : `val${i}` }))} setValue={value => sendPropUpdate({ vals: { $splice: [[i, 1, value]] } })} />,
+                    <Dropdown key={i} current={vals[i]} values={Object.keys(pivotState.attrValues).filter(e => !hiddenAttributes.includes(e) && !hiddenFromAggregators.includes(e))} open={isOpen(`val${i}`)} zIndex={isOpen(`val${i}`) ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen(`val${i}`) ? false : `val${i}` }))} setValue={value => { const newVals = [...vals]; newVals[i] = value; actions.updateProp('vals', newVals); }} />,
                     i + 1 !== numValsAllowed ? <br key={`br${i}`} /> : null,
                   ])}
                 </td>
@@ -555,15 +502,15 @@ const PivotTableUI = props => {
             <>
               <tr>
                 <td className="pvtRenderers">
-                  <Dropdown current={actualRendererName} values={Object.keys(renderers)} open={isOpen('renderer')} zIndex={isOpen('renderer') ? state.maxZIndex + 1 : 1} toggle={() => setState(s => ({ ...s, openDropdown: isOpen('renderer') ? false : 'renderer' }))} setValue={propUpdater('rendererName')} />
+                  <Dropdown current={actualRendererName} values={Object.keys(renderers)} open={isOpen('renderer')} zIndex={isOpen('renderer') ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('renderer') ? false : 'renderer' }))} setValue={v => actions.updateProp('rendererName', v)} />
                 </td>
                 <td className="pvtVals">
-                  <Dropdown current={aggregatorName} values={Object.keys(aggregators)} open={isOpen('aggregators')} zIndex={isOpen('aggregators') ? state.maxZIndex + 1 : 1} toggle={() => setState(s => ({ ...s, openDropdown: isOpen('aggregators') ? false : 'aggregators' }))} setValue={propUpdater('aggregatorName')} />
-                  <a role="button" className="pvtRowOrder" onClick={() => propUpdater('rowOrder')(sortIcons[rowOrder].next)}>{sortIcons[rowOrder].rowSymbol}</a>
-                  <a role="button" className="pvtColOrder" onClick={() => propUpdater('colOrder')(sortIcons[colOrder].next)}>{sortIcons[colOrder].colSymbol}</a>
+                  <Dropdown current={aggregatorName} values={Object.keys(aggregators)} open={isOpen('aggregators')} zIndex={isOpen('aggregators') ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('aggregators') ? false : 'aggregators' }))} setValue={v => actions.updateProp('aggregatorName', v)} />
+                  <a role="button" className="pvtRowOrder" onClick={() => actions.updateProp('rowOrder', sortIcons[rowOrder].next)}>{sortIcons[rowOrder].rowSymbol}</a>
+                  <a role="button" className="pvtColOrder" onClick={() => actions.updateProp('colOrder', sortIcons[colOrder].next)}>{sortIcons[colOrder].colSymbol}</a>
                   {numValsAllowed > 0 && <br />}
                   {new Array(numValsAllowed).fill(null).map((_, i) => [
-                    <Dropdown key={i} current={vals[i]} values={Object.keys(state.attrValues).filter(e => !hiddenAttributes.includes(e) && !hiddenFromAggregators.includes(e))} open={isOpen(`val${i}`)} zIndex={isOpen(`val${i}`) ? state.maxZIndex + 1 : 1} toggle={() => setState(s => ({ ...s, openDropdown: isOpen(`val${i}`) ? false : `val${i}` }))} setValue={value => sendPropUpdate({ vals: { $splice: [[i, 1, value]] } })} />,
+                    <Dropdown key={i} current={vals[i]} values={Object.keys(pivotState.attrValues).filter(e => !hiddenAttributes.includes(e) && !hiddenFromAggregators.includes(e))} open={isOpen(`val${i}`)} zIndex={isOpen(`val${i}`) ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen(`val${i}`) ? false : `val${i}` }))} setValue={value => { const newVals = [...vals]; newVals[i] = value; actions.updateProp('vals', newVals); }} />,
                     i + 1 !== numValsAllowed ? <br key={`br${i}`} /> : null,
                   ])}
                 </td>

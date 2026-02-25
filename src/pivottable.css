@@ -59,6 +59,7 @@ table.pvtTable td {
     overflow: hidden;
     text-overflow: ellipsis;
     font-weight: normal;
+    font-size: var(--pvt-font-size);
 }
 
 /* Header Styles */
@@ -477,20 +478,20 @@ table.pvtTable tr.pvtEmptyRow .pvtRowNumber {
 }
 
 /* Size Configurations */
-.pvtUi.pvtSize-sm table.pvtTable th,
-.pvtUi.pvtSize-sm table.pvtTable td {
-    --pvt-font-size: 11px;
-    --pvt-row-height: 32px;
+.pvt-size-sm table.pvtTable th,
+.pvt-size-sm table.pvtTable td {
+    --pvt-font-size: 11px !important;
+    --pvt-row-height: 32px !important;
 }
 
-.pvtUi.pvtSize-md table.pvtTable th,
-.pvtUi.pvtSize-md table.pvtTable td {
-    --pvt-font-size: 12px;
-    --pvt-row-height: 36px;
+.pvt-size-md table.pvtTable th,
+.pvt-size-md table.pvtTable td {
+    --pvt-font-size: 13px !important;
+    --pvt-row-height: 36px !important;
 }
 
-.pvtUi.pvtSize-lg table.pvtTable th,
-.pvtUi.pvtSize-lg table.pvtTable td {
-    --pvt-font-size: 14px;
-    --pvt-row-height: 42px;
+.pvt-size-lg table.pvtTable th,
+.pvt-size-lg table.pvtTable td {
+    --pvt-font-size: 14px !important;
+    --pvt-row-height: 42px !important;
 }
