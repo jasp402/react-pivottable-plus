@@ -15,7 +15,7 @@ const DnDContainer = ({ list, setList, className, children }) => {
     const el = useRef(null);
     const setListRef = useRef(setList);
     const listRef = useRef(list);
-    
+
     useEffect(() => {
         setListRef.current = setList;
     }, [setList]);
@@ -54,7 +54,7 @@ const DnDContainer = ({ list, setList, className, children }) => {
                     const newOrder = [...listRef.current];
                     newOrder.splice(oldIndex, 1);
                     newOrder.splice(newIndex, 0, itemId);
-                    
+
                     if (setListRef.current) {
                         setListRef.current(newOrder);
                     }
@@ -88,13 +88,13 @@ const DnDContainer = ({ list, setList, className, children }) => {
 
     return (
         <div className={className}>
-            <ul 
-                ref={el} 
-                style={{ 
-                    listStyleType: 'none', 
-                    padding: 0, 
-                    margin: 0, 
-                    minHeight: '1.5rem', 
+            <ul
+                ref={el}
+                style={{
+                    listStyleType: 'none',
+                    padding: 0,
+                    margin: 0,
+                    minHeight: '1.5rem',
                     width: '100%',
                     display: 'flex',
                     flexWrap: 'wrap',
@@ -127,8 +127,8 @@ export function ShadcnDashboardUI(props) {
     const totalPages = Math.ceil(totalPivotRows / (pivotProps.pageSize || 20));
 
     const unusedList = Object.keys(pivotState.attrValues)
-      .filter(e => e && e.trim() !== '' && !pivotProps.rows.includes(e) && !pivotProps.cols.includes(e))
-      .sort(sortAs(pivotState.unusedOrder || []));
+        .filter(e => e && e.trim() !== '' && !pivotProps.rows.includes(e) && !pivotProps.cols.includes(e))
+        .sort(sortAs(pivotState.unusedOrder || []));
 
     const colList = pivotProps.cols.filter(e => e && e.trim() !== '');
     const rowList = pivotProps.rows.filter(e => e && e.trim() !== '');
@@ -137,8 +137,8 @@ export function ShadcnDashboardUI(props) {
         const values = Object.keys(pivotState.attrValues[attr] || {});
         const valueFilter = pivotProps.valueFilter[attr] || {};
         const [filterText, setFilterText] = useState('');
-        
-        const filteredValues = values.filter(v => 
+
+        const filteredValues = values.filter(v =>
             v.toString().toLowerCase().includes(filterText.toLowerCase())
         ).sort();
 
@@ -165,7 +165,7 @@ export function ShadcnDashboardUI(props) {
                 </button>
 
                 {openDropdown === attr && (
-                    <div 
+                    <div
                         className="absolute top-full left-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-2xl z-[1000] p-4 cursor-default"
                         onClick={e => e.stopPropagation()}
                     >
@@ -218,18 +218,18 @@ export function ShadcnDashboardUI(props) {
         );
     };
 
-  const renderAttribute = (attr) => (
-    <AttributeItem
-      key={attr}
-      attr={attr}
-      data-id={attr}
-      pivotState={pivotState}
-      pivotProps={pivotProps}
-      actions={actions}
-      openDropdown={openDropdown}
-      setOpenDropdown={setOpenDropdown}
-    />
-  );
+    const renderAttribute = (attr) => (
+        <AttributeItem
+            key={attr}
+            attr={attr}
+            data-id={attr}
+            pivotState={pivotState}
+            pivotProps={pivotProps}
+            actions={actions}
+            openDropdown={openDropdown}
+            setOpenDropdown={setOpenDropdown}
+        />
+    );
 
     return (
         <div className="flex flex-col bg-white border border-slate-200 rounded-lg overflow-hidden font-sans text-slate-800 text-sm shadow-sm">
@@ -248,80 +248,80 @@ export function ShadcnDashboardUI(props) {
 
                 {/* Unused Attrs */}
                 <div className="flex-1 p-4 bg-slate-50/80">
-                  <DnDContainer
-                    list={unusedList}
-                    setList={(newOrder) => {
-                      actions.setUnusedOrder(newOrder);
-                    }}
-                    className="flex flex-wrap gap-2 w-full min-h-[1.5rem]"
-                  >
-                    {unusedList.map(renderAttribute)}
-                  </DnDContainer>
+                    <DnDContainer
+                        list={unusedList}
+                        setList={(newOrder) => {
+                            actions.setUnusedOrder(newOrder);
+                        }}
+                        className="flex flex-wrap gap-2 w-full min-h-[1.5rem]"
+                    >
+                        {unusedList.map(renderAttribute)}
+                    </DnDContainer>
                 </div>
-              </div>
-        
-              {/* Row 2: Aggregators & Column Attributes */}
-              <div className="flex w-full border-b border-slate-200 min-h-[4rem]">
+            </div>
+
+            {/* Row 2: Aggregators & Column Attributes */}
+            <div className="flex w-full border-b border-slate-200 min-h-[4rem]">
                 {/* Aggregators */}
                 <div className="w-[300px] p-4 border-r border-slate-200 bg-slate-50/30 flex-shrink-0 flex items-start">
-                  <div className="flex flex-col gap-2 w-full">
-                    <div className="flex items-center gap-2">
-                      <select
-                        className="flex-1 text-xs font-medium border border-slate-300 rounded px-3 py-1.5 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none hover:border-slate-400 bg-white text-slate-700"
-                        value={aggregatorName}
-                        onChange={(e) => actions.updateProp('aggregatorName', e.target.value)}
-                      >
-                        {Object.keys(pivotProps.aggregators).map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-        
-                      <div className="flex items-center text-slate-600 gap-1.5 text-base leading-none">
-                        <span className="cursor-pointer hover:text-slate-900 transition-colors">↕</span>
-                        <span className="cursor-pointer hover:text-slate-900 transition-colors">↔</span>
-                      </div>
+                    <div className="flex flex-col gap-2 w-full">
+                        <div className="flex items-center gap-2">
+                            <select
+                                className="flex-1 text-xs font-medium border border-slate-300 rounded px-3 py-1.5 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none hover:border-slate-400 bg-white text-slate-700"
+                                value={aggregatorName}
+                                onChange={(e) => actions.updateProp('aggregatorName', e.target.value)}
+                            >
+                                {Object.keys(pivotProps.aggregators).map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+
+                            <div className="flex items-center text-slate-600 gap-1.5 text-base leading-none">
+                                <span className="cursor-pointer hover:text-slate-900 transition-colors">↕</span>
+                                <span className="cursor-pointer hover:text-slate-900 transition-colors">↔</span>
+                            </div>
+                        </div>
+
+                        {pivotProps.aggregators[pivotProps.aggregatorName]([])().numInputs > 0 && (
+                            <select
+                                className="w-full text-xs font-medium border border-slate-300 rounded px-3 py-1.5 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none hover:border-slate-400 bg-white text-slate-700"
+                                value={pivotProps.vals[0] || ''}
+                                onChange={(e) => actions.updateProp('vals', [e.target.value])}
+                            >
+                                {Object.keys(pivotState.attrValues).map(r => <option key={r} value={r}>{r}</option>)}
+                            </select>
+                        )}
                     </div>
-        
-                    {pivotProps.aggregators[pivotProps.aggregatorName]([])().numInputs > 0 && (
-                      <select
-                        className="w-full text-xs font-medium border border-slate-300 rounded px-3 py-1.5 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none hover:border-slate-400 bg-white text-slate-700"
-                        value={pivotProps.vals[0] || ''}
-                        onChange={(e) => actions.updateProp('vals', [e.target.value])}
-                      >
-                        {Object.keys(pivotState.attrValues).map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                    )}
-                  </div>
                 </div>
-        
+
                 {/* Col Attrs */}
                 <div className="flex-1 p-4 bg-white">
-                  <DnDContainer
-                    list={colList}
-                    setList={(newOrder) => {
-                      actions.updateProp('cols', newOrder);
-                    }}
-                    className="flex flex-wrap gap-2 w-full min-h-[1.5rem]"
-                  >
-                    {colList.map(renderAttribute)}
-                  </DnDContainer>
+                    <DnDContainer
+                        list={colList}
+                        setList={(newOrder) => {
+                            actions.updateProp('cols', newOrder);
+                        }}
+                        className="flex flex-wrap gap-2 w-full min-h-[1.5rem]"
+                    >
+                        {colList.map(renderAttribute)}
+                    </DnDContainer>
                 </div>
-              </div>
-        
-              {/* Row 3: Row Attributes & Table Data */}
-              <div className="flex w-full min-h-[400px]">
+            </div>
+
+            {/* Row 3: Row Attributes & Table Data */}
+            <div className="flex w-full min-h-[400px]">
                 {/* Row Attrs */}
                 <div className="w-[300px] p-4 border-r border-slate-200 bg-white flex-shrink-0">
-                  <DnDContainer
-                    list={rowList}
-                    setList={(newOrder) => {
-                      actions.updateProp('rows', newOrder);
-                    }}
-                    className="flex flex-col gap-2 w-full min-h-[1.5rem]"
-                  >
-                    {rowList.map(renderAttribute)}
-                  </DnDContainer>
+                    <DnDContainer
+                        list={rowList}
+                        setList={(newOrder) => {
+                            actions.updateProp('rows', newOrder);
+                        }}
+                        className="flex flex-col gap-2 w-full min-h-[1.5rem]"
+                    >
+                        {rowList.map(renderAttribute)}
+                    </DnDContainer>
                 </div>
                 {/* Table Output */}
-                <div className="flex-1 w-full p-4 bg-slate-50/30 overflow-auto">
+                <div className={`pvtUi pvtSize-${pivotProps.size || 'lg'} flex-1 w-full p-4 bg-slate-50/30 overflow-auto`}>
                     <PivotTable {...pivotProps} data={pivotState.materializedInput} />
                 </div>
             </div>

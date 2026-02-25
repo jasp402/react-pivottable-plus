@@ -274,7 +274,7 @@ const DnDCell = ({
 const PivotTableUI = props => {
   const {
     data = [],
-    onChange = () => {},
+    onChange = () => { },
     rows = [],
     cols = [],
     vals = [],
@@ -295,6 +295,7 @@ const PivotTableUI = props => {
     rowOrder = 'key_a_to_z',
     colOrder = 'key_a_to_z',
     derivedAttributes = {},
+    size = 'lg',
   } = props;
 
   const [state, setState] = useState({
@@ -519,7 +520,7 @@ const PivotTableUI = props => {
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-      <table className="pvtUi">
+      <table className={`pvtUi pvtSize-${size}`}>
         <tbody onClick={() => setState(s => ({ ...s, openDropdown: false }))}>
           {horizUnused ? (
             <>
@@ -594,10 +595,11 @@ PivotTableUI.propTypes = Object.assign({}, PivotData.propTypes, {
   menuLimit: PropTypes.number,
   rendererName: PropTypes.string,
   renderers: PropTypes.objectOf(PropTypes.func),
+  size: PropTypes.oneOf(['sm', 'md', 'lg']),
 });
 
 PivotTableUI.defaultProps = Object.assign({}, PivotData.defaultProps, {
-  onChange: () => {},
+  onChange: () => { },
   hiddenAttributes: [],
   hiddenFromAggregators: [],
   hiddenFromDragDrop: [],

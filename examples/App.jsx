@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import tips from './tips';
-import {sortAs} from '../src/Utilities';
+import { sortAs } from '../src/Utilities';
 import SubtotalRenderers from '../src/SubtotalRenderers';
 import TableRenderers from '../src/TableRenderers';
 import createPlotlyRenderers from '../src/PlotlyRenderers';
@@ -14,13 +14,13 @@ import Papa from 'papaparse';
 const Plot = createPlotlyComponent(window.Plotly);
 
 function Checkbox(props) {
-    return <label className=" checkbox-inline" style={{textTransform: "capitalize"}}>
-            <input type="checkbox"
-                // onChange={e => props.update(e, props.name)}
-                name={props.name}
-                onChange={props.onChange}
-                defaultChecked={!props.unchecked}></input> {props.name.replace( /([A-Z])/g, " $1" )}
-        </label>
+    return <label className=" checkbox-inline" style={{ textTransform: "capitalize" }}>
+        <input type="checkbox"
+            // onChange={e => props.update(e, props.name)}
+            name={props.name}
+            onChange={props.onChange}
+            defaultChecked={!props.unchecked}></input> {props.name.replace(/([A-Z])/g, " $1")}
+    </label>
 }
 
 function Grouping(props) {
@@ -28,7 +28,7 @@ function Grouping(props) {
 
     const visible = !!props.rendererName && props.rendererName.startsWith('Table');
 
-    if(!visible)
+    if (!visible)
         return <div></div>;
 
     const onChange = e => {
@@ -44,23 +44,23 @@ function Grouping(props) {
             <Checkbox onChange={props.onChange} name="pagination" unchecked={true} />
         </div>
         <fieldset className="col-md-6" disabled={disabled}>
-            <Checkbox onChange={props.onChange} name="compactRows"/>
-            <Checkbox onChange={props.onChange} name="rowGroupBefore"/>
+            <Checkbox onChange={props.onChange} name="compactRows" />
+            <Checkbox onChange={props.onChange} name="rowGroupBefore" />
             <Checkbox onChange={props.onChange} name="colGroupBefore" unchecked={true} />
         </fieldset>
-        <br/>
-        <br/>
+        <br />
+        <br />
     </div>
-  }
+}
 
 class PivotTableUISmartWrapper extends React.PureComponent {
     constructor(props) {
         super(props);
-        this.state = {pivotState: props};
+        this.state = { pivotState: props };
     }
 
     componentWillReceiveProps(nextProps) {
-        this.setState({pivotState: nextProps});
+        this.setState({ pivotState: nextProps });
     }
 
     render() {
@@ -73,6 +73,7 @@ class PivotTableUISmartWrapper extends React.PureComponent {
                     createPlotlyRenderers(Plot)
                 )}
                 {...this.state.pivotState}
+                size={this.props.size}
                 // onChange={s => this.setState({pivotState: s}))}
                 unusedOrientationCutoff={Infinity}
             />
@@ -85,6 +86,7 @@ export default class App extends React.Component {
         this.setState({
             mode: 'demo',
             filename: 'Sample Dataset: Tips',
+            size: 'lg',
             pivotState: {
                 data: tips,
                 rows: ['Day of Week', 'Party Size'],
@@ -101,12 +103,12 @@ export default class App extends React.Component {
                         'Sunday',
                     ]),
                 },
-                plotlyOptions: {width: 900, height: 500},
+                plotlyOptions: { width: 900, height: 500 },
                 plotlyConfig: {},
                 tableOptions: {
-                    clickCallback: function(e, value, filters, pivotData) {
+                    clickCallback: function (e, value, filters, pivotData) {
                         var names = [];
-                        pivotData.forEachMatchingRecord(filters, function(
+                        pivotData.forEachMatchingRecord(filters, function (
                             record
                         ) {
                             names.push(record.Meal);
@@ -123,7 +125,7 @@ export default class App extends React.Component {
                 mode: 'thinking',
                 filename: '(Parsing CSV...)',
                 textarea: '',
-                pivotState: {data: []},
+                pivotState: { data: [] },
             },
             () =>
                 Papa.parse(files[0], {
@@ -133,7 +135,7 @@ export default class App extends React.Component {
                         this.setState({
                             mode: 'file',
                             filename: files[0].name,
-                            pivotState: {data: parsed.data},
+                            pivotState: { data: parsed.data },
                         }),
                 })
         );
@@ -148,15 +150,15 @@ export default class App extends React.Component {
                     mode: 'text',
                     filename: 'Data from <textarea>',
                     textarea: event.target.value,
-                    pivotState: {data: parsed.data},
+                    pivotState: { data: parsed.data },
                 }),
         });
     }
 
-    onGrouping({target: {name, checked}}) {
+    onGrouping({ target: { name, checked } }) {
         var pivotState = Object.assign({}, this.state.pivotState);
         pivotState[name] = checked;
-        this.setState({pivotState});
+        this.setState({ pivotState });
     }
 
     render() {
@@ -193,17 +195,32 @@ export default class App extends React.Component {
                     </p>
                     <br />
                 </div>
-                <div className="row">
+                <div className="row" style={{ position: 'relative' }}>
                     <h2 className="text-center">{this.state.filename}</h2>
+                    <div style={{ position: 'absolute', top: '15px', right: '15px', display: 'flex', alignItems: 'center', zIndex: 10 }}>
+                        <span style={{ fontSize: '20px', marginRight: '8px' }} title="Table Size Configuration">⚙️</span>
+                        <select
+                            value={this.state.size || 'lg'}
+                            onChange={e => this.setState({ size: e.target.value })}
+                            style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #c8d4e3', background: '#fff', color: '#2a3f5f', outline: 'none' }}
+                        >
+                            <option value="lg">Large (lg) - 100%</option>
+                            <option value="md">Medium (md) - 85%</option>
+                            <option value="sm">Small (sm) - 70%</option>
+                        </select>
+                    </div>
                     <br />
-
                 </div>
                 <Grouping
                     onChange={this.onGrouping.bind(this)}
                     rendererName={this.state.pivotState.rendererName}
                 />
                 <div className="row">
-                    <PivotTableUISmartWrapper {...this.state.pivotState} onChange={s => this.setState({pivotState: s})}/>
+                    <PivotTableUISmartWrapper
+                        size={this.state.size}
+                        {...this.state.pivotState}
+                        onChange={s => this.setState({ pivotState: s })}
+                    />
                 </div>
             </div>
         );

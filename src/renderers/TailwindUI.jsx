@@ -15,7 +15,7 @@ const DnDContainer = ({ list, setList, className, children }) => {
   const el = useRef(null);
   const setListRef = useRef(setList);
   const listRef = useRef(list);
-  
+
   useEffect(() => {
     setListRef.current = setList;
   }, [setList]);
@@ -23,61 +23,62 @@ const DnDContainer = ({ list, setList, className, children }) => {
   useEffect(() => {
     listRef.current = list;
     if (el.current && el.current.sortable) {
-        el.current.sortable._currentList = list;
+      el.current.sortable._currentList = list;
     }
   }, [list]);
 
-      useEffect(() => {
-          const sortable = Sortable.create(el.current, {
-              group: 'shared',
-              ghostClass: 'opacity-50',
-              animation: 150,
-                          onEnd: (evt) => {
-                              const { from, to, oldIndex, newIndex, item } = evt;
-                              const itemId = item.getAttribute('data-id');
-              
-                              // ── REVERSIÓN SÍNCRONA DEL DOM ──
-                              // Muy importante: eliminamos el item de su posición actual (to)
-                              // y lo devolvemos a la original (from) para que React lo encuentre.
-                              if (from !== to || oldIndex !== newIndex) {
-                                  item.remove();
-                                  const nextEl = from.children[oldIndex];
-                                  if (nextEl) {
-                                      from.insertBefore(item, nextEl);
-                                  } else {
-                                      from.appendChild(item);
-                                  }
-                              }
-              
-                              if (from === to) {
-                                  // ── Reordenamiento interno ──
-                                  const newOrder = [...listRef.current];
-                                  newOrder.splice(oldIndex, 1);
-                                  newOrder.splice(newIndex, 0, itemId);
-                                  
-                                  if (setListRef.current) {
-                                      setListRef.current(newOrder);
-                                  }
-                              } else {
-                                  // ── Movimiento entre listas ──
-                                  const fromSortable = from.sortable;
-                                  const toSortable = to.sortable;
-              
-                                  if (fromSortable?._setList && toSortable?._setList) {
-                                      const sourceItems = fromSortable._currentList.filter(id => id !== itemId);
-                                      const targetItems = [...toSortable._currentList];
-                                      targetItems.splice(newIndex, 0, itemId);
-              
-                                      fromSortable._setList(sourceItems);
-                                      toSortable._setList(targetItems);
-                                  }
-                              }
-                          },          });
+  useEffect(() => {
+    const sortable = Sortable.create(el.current, {
+      group: 'shared',
+      ghostClass: 'opacity-50',
+      animation: 150,
+      onEnd: (evt) => {
+        const { from, to, oldIndex, newIndex, item } = evt;
+        const itemId = item.getAttribute('data-id');
+
+        // ── REVERSIÓN SÍNCRONA DEL DOM ──
+        // Muy importante: eliminamos el item de su posición actual (to)
+        // y lo devolvemos a la original (from) para que React lo encuentre.
+        if (from !== to || oldIndex !== newIndex) {
+          item.remove();
+          const nextEl = from.children[oldIndex];
+          if (nextEl) {
+            from.insertBefore(item, nextEl);
+          } else {
+            from.appendChild(item);
+          }
+        }
+
+        if (from === to) {
+          // ── Reordenamiento interno ──
+          const newOrder = [...listRef.current];
+          newOrder.splice(oldIndex, 1);
+          newOrder.splice(newIndex, 0, itemId);
+
+          if (setListRef.current) {
+            setListRef.current(newOrder);
+          }
+        } else {
+          // ── Movimiento entre listas ──
+          const fromSortable = from.sortable;
+          const toSortable = to.sortable;
+
+          if (fromSortable?._setList && toSortable?._setList) {
+            const sourceItems = fromSortable._currentList.filter(id => id !== itemId);
+            const targetItems = [...toSortable._currentList];
+            targetItems.splice(newIndex, 0, itemId);
+
+            fromSortable._setList(sourceItems);
+            toSortable._setList(targetItems);
+          }
+        }
+      },
+    });
     el.current.sortable = sortable;
     sortable._setList = (newOrder) => {
-        if (setListRef.current) {
-            setListRef.current(newOrder);
-        }
+      if (setListRef.current) {
+        setListRef.current(newOrder);
+      }
     };
     sortable._currentList = listRef.current;
 
@@ -86,13 +87,13 @@ const DnDContainer = ({ list, setList, className, children }) => {
 
   return (
     <div className={className}>
-      <ul 
-        ref={el} 
-        style={{ 
-          listStyleType: 'none', 
-          padding: 0, 
-          margin: 0, 
-          minHeight: '1.5rem', 
+      <ul
+        ref={el}
+        style={{
+          listStyleType: 'none',
+          padding: 0,
+          margin: 0,
+          minHeight: '1.5rem',
           width: '100%',
           display: 'flex',
           flexWrap: 'wrap',
@@ -135,8 +136,8 @@ export function TailwindUI(props) {
     const values = Object.keys(pivotState.attrValues[attr] || {});
     const valueFilter = pivotProps.valueFilter[attr] || {};
     const [filterText, setFilterText] = useState('');
-    
-    const filteredValues = values.filter(v => 
+
+    const filteredValues = values.filter(v =>
       v.toString().toLowerCase().includes(filterText.toLowerCase())
     ).sort();
 
@@ -163,7 +164,7 @@ export function TailwindUI(props) {
         </button>
 
         {openDropdown === attr && (
-          <div 
+          <div
             className="absolute top-full left-0 mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-2xl z-[1000] p-4 cursor-default"
             onClick={e => e.stopPropagation()}
           >
@@ -320,7 +321,7 @@ export function TailwindUI(props) {
         </div>
 
         {/* Table Output */}
-        <div className="flex-1 w-full p-4 bg-slate-50/30 overflow-auto">
+        <div className={`pvtUi pvtSize-${pivotProps.size || 'lg'} flex-1 w-full p-4 bg-slate-50/30 overflow-auto`}>
           <PivotTable {...pivotProps} data={pivotState.materializedInput} />
         </div>
       </div>

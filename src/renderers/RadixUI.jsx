@@ -17,7 +17,7 @@ const DnDContainer = ({ list, setList, className, children }) => {
     const el = useRef(null);
     const setListRef = useRef(setList);
     const listRef = useRef(list);
-    
+
     useEffect(() => {
         setListRef.current = setList;
     }, [setList]);
@@ -54,7 +54,7 @@ const DnDContainer = ({ list, setList, className, children }) => {
                     const newOrder = [...listRef.current];
                     newOrder.splice(oldIndex, 1);
                     newOrder.splice(newIndex, 0, itemId);
-                    
+
                     if (setListRef.current) {
                         setListRef.current(newOrder);
                     }
@@ -88,13 +88,13 @@ const DnDContainer = ({ list, setList, className, children }) => {
 
     return (
         <div className={className}>
-            <ul 
-                ref={el} 
-                style={{ 
-                    listStyleType: 'none', 
-                    padding: 0, 
-                    margin: 0, 
-                    minHeight: '1.5rem', 
+            <ul
+                ref={el}
+                style={{
+                    listStyleType: 'none',
+                    padding: 0,
+                    margin: 0,
+                    minHeight: '1.5rem',
                     width: '100%',
                     display: 'flex',
                     flexWrap: 'wrap',
@@ -279,7 +279,7 @@ export function RadixUI(props) {
                 </div>
 
                 {/* Table Output */}
-                <div className="flex-1 w-full p-4 bg-slate-50/30 overflow-auto">
+                <div className={`pvtUi pvtSize-${pivotProps.size || 'lg'} flex-1 w-full p-4 bg-slate-50/30 overflow-auto`}>
                     <PivotTable {...pivotProps} data={pivotState.materializedInput} />
                 </div>
             </div>

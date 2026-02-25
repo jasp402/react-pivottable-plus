@@ -18,23 +18,23 @@ import '../src/grouping.css';
 const Plot = createPlotlyComponent(window.Plotly || {});
 
 const UI_VERSIONS = [
-  { 
-    id: 'tailwind', 
-    name: 'Tailwind Pure', 
+  {
+    id: 'tailwind',
+    name: 'Tailwind Pure',
     description: 'Minimalista & Utility-First',
     icon: <Palette size={20} />,
     color: 'bg-sky-500'
   },
-  { 
-    id: 'radix', 
-    name: 'Radix UI + Tailwind', 
+  {
+    id: 'radix',
+    name: 'Radix UI + Tailwind',
     description: 'Accesible & Premium Components',
     icon: <Box size={20} />,
     color: 'bg-indigo-500'
   },
-  { 
-    id: 'shadcn', 
-    name: 'Shadcn Dashboard', 
+  {
+    id: 'shadcn',
+    name: 'Shadcn Dashboard',
     description: 'Enterprise Data Explorer',
     icon: <Layout size={20} />,
     color: 'bg-slate-900'
@@ -65,13 +65,14 @@ const Gallery = () => {
     renderers: allRenderers,
     aggregators: aggregators,
     plotlyOptions: { width: 900, height: 500 },
-    plotlyConfig: {}
+    plotlyConfig: {},
+    size: 'lg'
   });
 
   const renderActiveUI = () => {
     const commonProps = {
-        ...pivotState,
-        onChange: setPivotState
+      ...pivotState,
+      onChange: setPivotState
     };
 
     switch (activeUI) {
@@ -99,11 +100,10 @@ const Gallery = () => {
             <button
               key={ui.id}
               onClick={() => setActiveUI(ui.id)}
-              className={`w-full flex items-start gap-4 p-4 rounded-2xl transition-all border-2 text-left group ${
-                activeUI === ui.id 
-                  ? 'bg-white border-blue-500 shadow-lg scale-[1.02]' 
+              className={`w-full flex items-start gap-4 p-4 rounded-2xl transition-all border-2 text-left group ${activeUI === ui.id
+                  ? 'bg-white border-blue-500 shadow-lg scale-[1.02]'
                   : 'bg-transparent border-transparent hover:bg-slate-50 text-slate-500'
-              }`}
+                }`}
             >
               <div className={`p-2 rounded-xl text-white shadow-md transition-transform group-hover:rotate-6 ${ui.color}`}>
                 {ui.icon}
@@ -121,27 +121,39 @@ const Gallery = () => {
         </nav>
 
         <div className="p-6 border-t border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
-            Selecciona una versión para probar
+          Selecciona una versión para probar
         </div>
       </aside>
 
       {/* Workspace Canvas */}
       <main className="flex-1 relative overflow-auto bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]">
         <div className="absolute inset-0 p-12">
-           <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Ambiente de Pruebas</h2>
-                <div className="flex items-center gap-2 mt-1">
-                   <span className="text-2xl font-black text-slate-900">
-                     {UI_VERSIONS.find(v => v.id === activeUI).name}
-                   </span>
-                </div>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.3em]">Ambiente de Pruebas</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-2xl font-black text-slate-900">
+                  {UI_VERSIONS.find(v => v.id === activeUI).name}
+                </span>
               </div>
-           </div>
+            </div>
+            <div className="flex items-center">
+              <span className="text-xl mr-2" title="Configurar Tamaño de Tabla">⚙️</span>
+              <select
+                value={pivotState.size}
+                onChange={e => setPivotState({ ...pivotState, size: e.target.value })}
+                className="p-2 rounded-lg border border-slate-200 text-slate-700 bg-white text-sm outline-none shadow-sm font-medium"
+              >
+                <option value="lg">Tamaño: Large (100%)</option>
+                <option value="md">Tamaño: Medium (85%)</option>
+                <option value="sm">Tamaño: Small (70%)</option>
+              </select>
+            </div>
+          </div>
 
-           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-             {renderActiveUI()}
-           </div>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {renderActiveUI()}
+          </div>
         </div>
       </main>
     </div>

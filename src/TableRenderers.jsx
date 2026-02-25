@@ -1,9 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import {PivotData} from './Utilities';
+import { PivotData } from './Utilities';
 
 // helper function for setting row/col-span in pivotTableRenderer
-const spanSize = function(arr, i, j, no_loop = false) {
+const spanSize = function (arr, i, j, no_loop = false) {
   let x;
   if (i !== 0) {
     let asc, end;
@@ -48,7 +48,7 @@ function redColorScaleGenerator(values) {
   return x => {
     // eslint-disable-next-line no-magic-numbers
     const nonRed = 255 - Math.round((255 * (x - min)) / (max - min));
-    return {backgroundColor: `rgb(255,${nonRed},${nonRed})`};
+    return { backgroundColor: `rgb(255,${nonRed},${nonRed})` };
   };
 }
 
@@ -75,9 +75,9 @@ function makeRenderer(opts = {}) {
       const specialCase = grouping && !this.props.rowGroupBefore;
       const folded = (this.state || {}).folded || new Set();
       const isFolded = keys => has(folded, keys.map(flatKey));
-      const fold = keys => this.setState({folded: toggle(new Set(folded), keys.map(flatKey))});
+      const fold = keys => this.setState({ folded: toggle(new Set(folded), keys.map(flatKey)) });
 
-      if(grouping){
+      if (grouping) {
         for (const key of folded) {
           colKeys = colKeys.filter(colKey => !flatKey(colKey).startsWith(key + String.fromCharCode(0)));
           rowKeys = rowKeys.filter(rowKey => !flatKey(rowKey).startsWith(key + String.fromCharCode(0)));
@@ -85,15 +85,18 @@ function makeRenderer(opts = {}) {
       }
 
       const totalRows = rowKeys.length;
+      let startOffset = 0;
       if (this.props.pagination) {
         const start = (this.props.page - 1) * this.props.pageSize;
+        startOffset = start;
         const end = start + this.props.pageSize;
         rowKeys = rowKeys.slice(start, end);
       }
+      const showRowNumbers = this.props.showRowNumbers !== false;
 
-      let valueCellColors = () => {};
-      let rowTotalColors = () => {};
-      let colTotalColors = () => {};
+      let valueCellColors = () => { };
+      let rowTotalColors = () => { };
+      let colTotalColors = () => { };
       if (opts.heatmapMode) {
         const colorScaleGenerator = this.props.tableColorScaleGenerator;
         const rowTotalValues = colKeys.map(x =>
@@ -138,47 +141,50 @@ function makeRenderer(opts = {}) {
       const getClickHandler =
         this.props.tableOptions && this.props.tableOptions.clickCallback
           ? (value, rowValues, colValues) => {
-              const filters = {};
-              for (const i of Object.keys(colAttrs || {})) {
-                const attr = colAttrs[i];
-                if (colValues[i] !== null) {
-                  filters[attr] = colValues[i];
-                }
+            const filters = {};
+            for (const i of Object.keys(colAttrs || {})) {
+              const attr = colAttrs[i];
+              if (colValues[i] !== null) {
+                filters[attr] = colValues[i];
               }
-              for (const i of Object.keys(rowAttrs || {})) {
-                const attr = rowAttrs[i];
-                if (rowValues[i] !== null) {
-                  filters[attr] = rowValues[i];
-                }
-              }
-              return e =>
-                this.props.tableOptions.clickCallback(
-                  e,
-                  value,
-                  filters,
-                  pivotData
-                );
             }
+            for (const i of Object.keys(rowAttrs || {})) {
+              const attr = rowAttrs[i];
+              if (rowValues[i] !== null) {
+                filters[attr] = rowValues[i];
+              }
+            }
+            return e =>
+              this.props.tableOptions.clickCallback(
+                e,
+                value,
+                filters,
+                pivotData
+              );
+          }
           : null;
 
-      const rbClass = grouping? this.props.rowGroupBefore ? "rowGroupBefore" : "rowGroupAfter" : "";
-      const cbClass = grouping? this.props.colGroupBefore ? "colGroupBefore" : "colGroupAfter" : "";
-      const clickClass = (pred, closed) => pred? " pvtClickable" + (closed? " closed": "") : "";
+      const rbClass = grouping ? this.props.rowGroupBefore ? "rowGroupBefore" : "rowGroupAfter" : "";
+      const cbClass = grouping ? this.props.colGroupBefore ? "colGroupBefore" : "colGroupAfter" : "";
+      const clickClass = (pred, closed) => pred ? " pvtClickable" + (closed ? " closed" : "") : "";
       return (
         <table id={id} className={`pvtTable ${rbClass} ${cbClass}`}>
           <thead>
-            {colAttrs.map(function(c, j) {
+            {colAttrs.map(function (c, j) {
               const clickable = grouping && colAttrs.length > j + 1;
-              const levelKeys = colKeys.filter(x => x.length === j+1);
+              const levelKeys = colKeys.filter(x => x.length === j + 1);
               return (
                 <tr key={`colAttr${j}`}>
+                  {showRowNumbers && j === 0 && (
+                    <th className="pvtRowNumber pvtAxisLabel" rowSpan={colAttrs.length + (rowAttrs.length === 0 ? 0 : 1)}>#</th>
+                  )}
                   {j === 0 && rowAttrs.length !== 0 && (
                     <th colSpan={rowAttrs.length} rowSpan={colAttrs.length} />
                   )}
                   <th className={"pvtAxisLabel" + clickClass(clickable, isFolded(levelKeys))}
-                   onClick={clickable? _ => fold(levelKeys): null}
+                    onClick={clickable ? _ => fold(levelKeys) : null}
                   >{c}</th>
-                  {colKeys.map(function(colKey, i) {
+                  {colKeys.map(function (colKey, i) {
                     const x = spanSize(colKeys, i, j);
                     if (x === -1) {
                       return null;
@@ -216,12 +222,15 @@ function makeRenderer(opts = {}) {
 
             {rowAttrs.length !== 0 && (
               <tr>
-                {rowAttrs.map(function(r, i) {
+                {showRowNumbers && colAttrs.length === 0 && (
+                  <th className="pvtRowNumber pvtAxisLabel" rowSpan="1">#</th>
+                )}
+                {rowAttrs.map(function (r, i) {
                   const clickable = grouping && rowAttrs.length > i + 1;
-                  const levelKeys = rowKeys.filter(x => x.length === i+1);
+                  const levelKeys = rowKeys.filter(x => x.length === i + 1);
                   return (
                     <th className={"pvtAxisLabel" + clickClass(clickable, isFolded(levelKeys))}
-                      onClick={clickable? _ => fold(levelKeys): null}
+                      onClick={clickable ? _ => fold(levelKeys) : null}
                       key={`rowAttr${i}`}>
                       {r}
                     </th>
@@ -235,18 +244,21 @@ function makeRenderer(opts = {}) {
           </thead>
 
           <tbody>
-            {rowKeys.map(function(rowKey, i) {
+            {rowKeys.map(function (rowKey, i) {
               const totalAggregator = pivotData.getAggregator(rowKey, []);
               const rowGap = rowAttrs.length - rowKey.length;
               const rowTotalValue = totalAggregator.value();
               return (
                 <tr key={`rowKeyRow${i}`}
                   className={(rowGap ? "pvtLevel" + rowGap : "pvtData") + " pvtRow-data"}>
-                  {rowKey.map(function(txt, j) {
+                  {showRowNumbers && (
+                    <th className="pvtRowNumber">{startOffset + i + 1}</th>
+                  )}
+                  {rowKey.map(function (txt, j) {
                     if (compactRows && j < rowKey.length - 1) {
                       return null;
                     }
-                    const clickable =  grouping && rowAttrs.length > j + 1;
+                    const clickable = grouping && rowAttrs.length > j + 1;
                     const x = compactRows ? 1 : spanSize(rowKeys, i, j, specialCase);
                     if (x === -1) {
                       return null;
@@ -258,12 +270,12 @@ function makeRenderer(opts = {}) {
                         rowSpan={x}
                         colSpan={
                           compactRows ?
-                          rowAttrs.length + 1 :
-                          j === rowAttrs.length - 1 && colAttrs.length !== 0
-                            ? 2
-                            : 1
+                            rowAttrs.length + 1 :
+                            j === rowAttrs.length - 1 && colAttrs.length !== 0
+                              ? 2
+                              : 1
                         }
-                        style={{paddingLeft: compactRows ? `calc(var(--pvt-row-padding, 5px) + ${j} * var(--pvt-row-indent, 20px))` : null}}
+                        style={{ paddingLeft: compactRows ? `calc(var(--pvt-row-padding, 5px) + ${j} * var(--pvt-row-indent, 20px))` : null }}
                         onClick={clickable && rowKey[j] ? _ => fold([rowKey.slice(0, j + 1)]) : null}
                       >
                         {txt}
@@ -274,7 +286,7 @@ function makeRenderer(opts = {}) {
                     ? <th className="pvtRowLabel" colSpan={rowGap + 1}>{"Total (" + rowKey[rowKey.length - 1] + ")"}</th>
                     : null
                   }
-                  {colKeys.map(function(colKey, j) {
+                  {colKeys.map(function (colKey, j) {
                     const aggregator = pivotData.getAggregator(rowKey, colKey);
                     const colGap = colAttrs.length - colKey.length;
                     const val = aggregator.value();
@@ -311,7 +323,19 @@ function makeRenderer(opts = {}) {
               );
             })}
 
+            {showRowNumbers && this.props.pagination && rowKeys.length < this.props.pageSize && (
+              Array.from({ length: this.props.pageSize - rowKeys.length }).map((_, padIdx) => (
+                <tr key={`padRow${padIdx}`} className="pvtRow-data pvtEmptyRow">
+                  <th className="pvtRowNumber">{startOffset + rowKeys.length + padIdx + 1}</th>
+                  <th className="pvtRowLabel" colSpan={rowAttrs.length + (colAttrs.length === 0 ? 0 : 1)}></th>
+                  {colKeys.map((colKey, j) => <td key={`padVal${padIdx}-${j}`} className="pvtVal pvtEmptyCell"></td>)}
+                  <td className="pvtTotal pvtEmptyCell"></td>
+                </tr>
+              ))
+            )}
+
             <tr className="pvtTotalRow">
+              {showRowNumbers && <th className="pvtTotalLabel"></th>}
               <th
                 className="pvtTotalLabel"
                 colSpan={rowAttrs.length + (colAttrs.length === 0 ? 0 : 1)}
@@ -319,7 +343,7 @@ function makeRenderer(opts = {}) {
                 Totals
               </th>
 
-              {colKeys.map(function(colKey, i) {
+              {colKeys.map(function (colKey, i) {
                 const totalAggregator = pivotData.getAggregator([], colKey);
                 const colGap = colAttrs.length - colKey.length;
                 const totalVal = totalAggregator.value();
@@ -363,6 +387,8 @@ function makeRenderer(opts = {}) {
   TableRenderer.propTypes.tableOptions = PropTypes.object;
   TableRenderer.defaultProps.compactRows = true;
   TableRenderer.propTypes.compactRows = PropTypes.bool;
+  TableRenderer.defaultProps.showRowNumbers = true;
+  TableRenderer.propTypes.showRowNumbers = PropTypes.bool;
   return TableRenderer;
 }
 
@@ -399,7 +425,7 @@ class TSVExportRenderer extends React.PureComponent {
     return (
       <textarea
         value={result.map(r => r.join('\t')).join('\n')}
-        style={{width: window.innerWidth / 2, height: window.innerHeight / 2}}
+        style={{ width: window.innerWidth / 2, height: window.innerHeight / 2 }}
         readOnly={true}
       />
     );
@@ -411,8 +437,8 @@ TSVExportRenderer.propTypes = PivotData.propTypes;
 
 export default {
   Table: makeRenderer(),
-  'Table Heatmap': makeRenderer({heatmapMode: 'full'}),
-  'Table Col Heatmap': makeRenderer({heatmapMode: 'col'}),
-  'Table Row Heatmap': makeRenderer({heatmapMode: 'row'}),
+  'Table Heatmap': makeRenderer({ heatmapMode: 'full' }),
+  'Table Col Heatmap': makeRenderer({ heatmapMode: 'col' }),
+  'Table Row Heatmap': makeRenderer({ heatmapMode: 'row' }),
   'Exportable TSV': TSVExportRenderer,
 };

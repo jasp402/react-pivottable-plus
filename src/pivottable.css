@@ -151,6 +151,7 @@ table.pvtTable td:empty {
 .pvtDropdown {
     display: inline-block;
     position: relative;
+    user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -khtml-user-select: none;
@@ -162,6 +163,7 @@ table.pvtTable td:empty {
     float: right;
     color: #a2b1c6;
 }
+
 .pvtDropdownCurrent {
     text-align: left;
     border: 1px solid #a2b1c6;
@@ -193,6 +195,7 @@ table.pvtTable td:empty {
     font-size: 12px;
     text-align: left;
 }
+
 .pvtDropdownActiveValue {
     background: #ebf0f8;
 }
@@ -213,6 +216,7 @@ table.pvtTable td:empty {
     list-style-type: none;
     cursor: move;
 }
+
 .pvtAxisContainer li.pvtPlaceholder {
     -webkit-border-radius: 5px;
     padding: 3px 15px;
@@ -220,6 +224,7 @@ table.pvtTable td:empty {
     border-radius: 5px;
     border: 1px dashed #a2b1c6;
 }
+
 .pvtAxisContainer li.pvtPlaceholder span.pvtAttr {
     display: none;
 }
@@ -248,6 +253,7 @@ table.pvtTable td:empty {
 .pvtHorizList li {
     display: inline-block;
 }
+
 .pvtVertList {
     vertical-align: top;
 }
@@ -331,12 +337,15 @@ table.pvtTable td:empty {
 .pvtFilterBox h4 {
     margin: 15px;
 }
+
 .pvtFilterBox p {
     margin: 10px auto;
 }
+
 .pvtFilterBox button {
     color: #2a3f5f;
 }
+
 .pvtFilterBox input[type='text'] {
     width: 230px;
     color: #2a3f5f;
@@ -382,6 +391,7 @@ table.pvtTable td:empty {
 .pvtCheckContainer p:hover .pvtOnly {
     display: block;
 }
+
 .pvtCheckContainer p:hover .pvtOnlySpacer {
     display: none;
 }
@@ -438,4 +448,49 @@ table.pvtTable td:empty {
     padding: 2px;
     color: #2a3f5f;
     background: white;
+}
+
+/* Row Numbers and Spreadsheet Empty Paddings */
+.pvtRowNumber {
+    background-color: var(--pvt-header-bg);
+    color: var(--pvt-text-color-muted, #6f7c87);
+    text-align: center;
+    font-weight: 500;
+    width: 40px;
+    min-width: 40px;
+    border-right: 1px solid var(--pvt-border-color);
+    border-bottom: 1px solid var(--pvt-border-color);
+    user-select: none;
+}
+
+table.pvtTable tr.pvtEmptyRow td,
+table.pvtTable tr.pvtEmptyRow th {
+    background-color: #fff;
+    border-bottom: 1px solid var(--pvt-border-color);
+    border-right: 1px solid var(--pvt-border-color);
+    height: var(--pvt-row-height);
+    line-height: var(--pvt-row-height);
+}
+
+table.pvtTable tr.pvtEmptyRow .pvtRowNumber {
+    background-color: var(--pvt-header-bg);
+}
+
+/* Size Configurations */
+.pvtUi.pvtSize-sm table.pvtTable th,
+.pvtUi.pvtSize-sm table.pvtTable td {
+    --pvt-font-size: 11px;
+    --pvt-row-height: 32px;
+}
+
+.pvtUi.pvtSize-md table.pvtTable th,
+.pvtUi.pvtSize-md table.pvtTable td {
+    --pvt-font-size: 12px;
+    --pvt-row-height: 36px;
+}
+
+.pvtUi.pvtSize-lg table.pvtTable th,
+.pvtUi.pvtSize-lg table.pvtTable td {
+    --pvt-font-size: 14px;
+    --pvt-row-height: 42px;
 }
