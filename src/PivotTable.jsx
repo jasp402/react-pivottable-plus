@@ -1,21 +1,20 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import {PivotData} from './Utilities';
+import { PivotData } from './Utilities';
 import TableRenderers from './TableRenderers';
 
 /* eslint-disable react/prop-types */
-// eslint can't see inherited propTypes!
 
-class PivotTable extends React.PureComponent {
-  render() {
-    const Renderer = this.props.renderers[
-      this.props.rendererName in this.props.renderers
-        ? this.props.rendererName
-        : Object.keys(this.props.renderers)[0]
-    ];
-    return <Renderer {...this.props} />;
-  }
-}
+const PivotTable = React.memo(function PivotTable(props) {
+  const Renderer = props.renderers[
+    props.rendererName in props.renderers
+      ? props.rendererName
+      : Object.keys(props.renderers)[0]
+  ];
+  return <Renderer {...props} />;
+});
+
+PivotTable.displayName = 'PivotTable';
 
 PivotTable.propTypes = Object.assign({}, PivotData.propTypes, {
   rendererName: PropTypes.string,

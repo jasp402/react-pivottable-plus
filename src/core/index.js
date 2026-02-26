@@ -14,5 +14,3 @@ export { ClientSideRowModel } from './rowModels/ClientSideRowModel';
 export { GridApi } from './api/GridApi';
 export { ColumnApi } from './api/ColumnApi';
 
-// Backward compatibility (Phase 1 class, still usable)
-export { PivotCore } from './PivotCore';

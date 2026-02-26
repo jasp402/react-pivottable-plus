@@ -273,11 +273,63 @@ const DnDCell = ({
   );
 };
 
+// ─── Extracted Helper: Renderer Dropdown ────────────────────────────────────────
+const RendererDropdown = ({ rendererName, renderers, isOpen, uiState, setUiState }) => (
+  <td className="pvtRenderers">
+    <Dropdown
+      current={rendererName}
+      values={Object.keys(renderers)}
+      open={isOpen('renderer')}
+      zIndex={isOpen('renderer') ? uiState.maxZIndex + 1 : 1}
+      toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('renderer') ? false : 'renderer' }))}
+      setValue={v => rendererName._updateProp('rendererName', v)}
+    />
+  </td>
+);
+
+// ─── Extracted Helper: Aggregator + Sort + Vals Controls ────────────────────────
+const AggregatorControls = ({
+  aggregatorName, aggregators, vals, pivotState,
+  hiddenAttributes, hiddenFromAggregators,
+  isOpen, uiState, setUiState, actions,
+  rowOrder, colOrder, sortIcons, numValsAllowed,
+}) => (
+  <>
+    <Dropdown
+      current={aggregatorName}
+      values={Object.keys(aggregators)}
+      open={isOpen('aggregators')}
+      zIndex={isOpen('aggregators') ? uiState.maxZIndex + 1 : 1}
+      toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('aggregators') ? false : 'aggregators' }))}
+      setValue={v => actions.updateProp('aggregatorName', v)}
+    />
+    <a role="button" className="pvtRowOrder" onClick={() => actions.updateProp('rowOrder', sortIcons[rowOrder].next)}>
+      {sortIcons[rowOrder].rowSymbol}
+    </a>
+    <a role="button" className="pvtColOrder" onClick={() => actions.updateProp('colOrder', sortIcons[colOrder].next)}>
+      {sortIcons[colOrder].colSymbol}
+    </a>
+    {numValsAllowed > 0 && <br />}
+    {new Array(numValsAllowed).fill(null).map((_, i) => [
+      <Dropdown
+        key={i}
+        current={vals[i]}
+        values={Object.keys(pivotState.attrValues).filter(e => !hiddenAttributes.includes(e) && !hiddenFromAggregators.includes(e))}
+        open={isOpen(`val${i}`)}
+        zIndex={isOpen(`val${i}`) ? uiState.maxZIndex + 1 : 1}
+        toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen(`val${i}`) ? false : `val${i}` }))}
+        setValue={value => { const newVals = [...vals]; newVals[i] = value; actions.updateProp('vals', newVals); }}
+      />,
+      i + 1 !== numValsAllowed ? <br key={`br${i}`} /> : null,
+    ])}
+  </>
+);
+
 const PivotTableUI = props => {
-  // ─── Headless Core: toda la lógica de datos y props fluye a través del Core ───
+  // ─── Headless Core ───
   const { props: pivotProps, state: pivotState, actions } = usePivot(props);
 
-  // ─── Estado local solo para UI (no pertenece al Core) ─────────────────────────
+  // ─── UI State local ───
   const [uiState, setUiState] = useState({
     zIndices: {},
     maxZIndex: 1000,
@@ -285,7 +337,6 @@ const PivotTableUI = props => {
   });
   const [activeId, setActiveId] = useState(null);
 
-  // ─── Helpers de UI local ──────────────────────────────────────────────────────
   const moveFilterBoxToTop = useCallback(attribute => {
     setUiState(s => ({
       ...s,
@@ -294,7 +345,7 @@ const PivotTableUI = props => {
     }));
   }, []);
 
-  // ─── Derivados desde el Core ──────────────────────────────────────────────────
+  // ─── Derivados ───
   const {
     rows = [],
     cols = [],
@@ -331,7 +382,7 @@ const PivotTableUI = props => {
   const colAttrs = cols.filter(e => e && e.trim() !== '' && !hiddenAttributes.includes(e) && !hiddenFromDragDrop.includes(e));
   const rowAttrs = rows.filter(e => e && e.trim() !== '' && !hiddenAttributes.includes(e) && !hiddenFromDragDrop.includes(e));
 
-  // ─── DnD Zones ────────────────────────────────────────────────────────────────
+  // ─── DnD ───
   const getZoneOfItem = id => {
     if (rowAttrs.includes(id)) return 'rows';
     if (colAttrs.includes(id)) return 'cols';
@@ -389,7 +440,7 @@ const PivotTableUI = props => {
     }
   };
 
-  // ─── Dropdowns y controles ────────────────────────────────────────────────────
+  // ─── Controls ───
   const isOpen = dropdown => uiState.openDropdown === dropdown;
   const numValsAllowed = (aggregators[aggregatorName]?.([])?.()?.numInputs) || 0;
   const actualRendererName = (rendererName in renderers) ? rendererName : Object.keys(renderers)[0];
@@ -400,7 +451,6 @@ const PivotTableUI = props => {
     value_z_to_a: { rowSymbol: '↑', colSymbol: '←', next: 'key_a_to_z' },
   };
 
-  // Estado combinado para DnDCell (necesita zIndices del UI local + attrValues del Core)
   const combinedState = {
     attrValues: pivotState.attrValues,
     zIndices: uiState.zIndices,
@@ -420,31 +470,18 @@ const PivotTableUI = props => {
 
   const componentProps = {
     data: pivotState.materializedInput,
-    rows,
-    cols,
-    vals,
-    aggregatorName,
-    aggregators,
-    rendererName,
-    renderers,
-    valueFilter,
-    sorters,
-    menuLimit,
-    unusedOrientationCutoff,
-    hiddenAttributes,
-    hiddenFromAggregators,
-    hiddenFromDragDrop,
-    pagination,
-    page,
-    pageSize,
-    rowOrder,
-    colOrder,
+    rows, cols, vals,
+    aggregatorName, aggregators,
+    rendererName, renderers,
+    valueFilter, sorters,
+    menuLimit, unusedOrientationCutoff,
+    hiddenAttributes, hiddenFromAggregators, hiddenFromDragDrop,
+    pagination, page, pageSize,
+    rowOrder, colOrder,
     derivedAttributes: pivotProps.derivedAttributes,
     cellPipeline: pivotProps.cellPipeline,
     virtualization: pivotProps.virtualization,
-    columnResizing,
-    columnWidths,
-    onColumnWidthChange,
+    columnResizing, columnWidths, onColumnWidthChange,
   };
 
   const renderFooter = () => {
@@ -473,6 +510,44 @@ const PivotTableUI = props => {
     );
   };
 
+  // ─── Shared renderer/aggregator controls ───
+  const rendererDropdown = (
+    <Dropdown
+      current={actualRendererName}
+      values={Object.keys(renderers)}
+      open={isOpen('renderer')}
+      zIndex={isOpen('renderer') ? uiState.maxZIndex + 1 : 1}
+      toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('renderer') ? false : 'renderer' }))}
+      setValue={v => actions.updateProp('rendererName', v)}
+    />
+  );
+
+  const aggControls = (
+    <AggregatorControls
+      aggregatorName={aggregatorName}
+      aggregators={aggregators}
+      vals={vals}
+      pivotState={pivotState}
+      hiddenAttributes={hiddenAttributes}
+      hiddenFromAggregators={hiddenFromAggregators}
+      isOpen={isOpen}
+      uiState={uiState}
+      setUiState={setUiState}
+      actions={actions}
+      rowOrder={rowOrder}
+      colOrder={colOrder}
+      sortIcons={sortIcons}
+      numValsAllowed={numValsAllowed}
+    />
+  );
+
+  const outputCell = (
+    <td className="pvtOutput">
+      <PivotTable {...componentProps} />
+      {pagination && renderFooter()}
+    </td>
+  );
+
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
       <table className={`pvtUi pvt-theme-${props.theme || 'default'} pvt-size-${size || 'lg'}`}>
@@ -480,57 +555,29 @@ const PivotTableUI = props => {
           {horizUnused ? (
             <>
               <tr>
-                <td className="pvtRenderers">
-                  <Dropdown current={actualRendererName} values={Object.keys(renderers)} open={isOpen('renderer')} zIndex={isOpen('renderer') ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('renderer') ? false : 'renderer' }))} setValue={v => actions.updateProp('rendererName', v)} />
-                </td>
-                <DnDCell id="unused" items={unusedAttrs} classes={`pvtAxisContainer pvtUnused pvtHorizList`} isHorizontal={true} {...sharedCellProps} />
+                <td className="pvtRenderers">{rendererDropdown}</td>
+                <DnDCell id="unused" items={unusedAttrs} classes="pvtAxisContainer pvtUnused pvtHorizList" isHorizontal={true} {...sharedCellProps} />
               </tr>
               <tr>
-                <td className="pvtVals">
-                  <Dropdown current={aggregatorName} values={Object.keys(aggregators)} open={isOpen('aggregators')} zIndex={isOpen('aggregators') ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('aggregators') ? false : 'aggregators' }))} setValue={v => actions.updateProp('aggregatorName', v)} />
-                  <a role="button" className="pvtRowOrder" onClick={() => actions.updateProp('rowOrder', sortIcons[rowOrder].next)}>{sortIcons[rowOrder].rowSymbol}</a>
-                  <a role="button" className="pvtColOrder" onClick={() => actions.updateProp('colOrder', sortIcons[colOrder].next)}>{sortIcons[colOrder].colSymbol}</a>
-                  {numValsAllowed > 0 && <br />}
-                  {new Array(numValsAllowed).fill(null).map((_, i) => [
-                    <Dropdown key={i} current={vals[i]} values={Object.keys(pivotState.attrValues).filter(e => !hiddenAttributes.includes(e) && !hiddenFromAggregators.includes(e))} open={isOpen(`val${i}`)} zIndex={isOpen(`val${i}`) ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen(`val${i}`) ? false : `val${i}` }))} setValue={value => { const newVals = [...vals]; newVals[i] = value; actions.updateProp('vals', newVals); }} />,
-                    i + 1 !== numValsAllowed ? <br key={`br${i}`} /> : null,
-                  ])}
-                </td>
+                <td className="pvtVals">{aggControls}</td>
                 <DnDCell id="cols" items={colAttrs} classes="pvtAxisContainer pvtHorizList pvtCols" isHorizontal={true} {...sharedCellProps} />
               </tr>
               <tr>
                 <DnDCell id="rows" items={rowAttrs} classes="pvtAxisContainer pvtVertList pvtRows" isHorizontal={false} {...sharedCellProps} />
-                <td className="pvtOutput">
-                  <PivotTable {...componentProps} />
-                  {pagination && renderFooter()}
-                </td>
+                {outputCell}
               </tr>
             </>
           ) : (
             <>
               <tr>
-                <td className="pvtRenderers">
-                  <Dropdown current={actualRendererName} values={Object.keys(renderers)} open={isOpen('renderer')} zIndex={isOpen('renderer') ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('renderer') ? false : 'renderer' }))} setValue={v => actions.updateProp('rendererName', v)} />
-                </td>
-                <td className="pvtVals">
-                  <Dropdown current={aggregatorName} values={Object.keys(aggregators)} open={isOpen('aggregators')} zIndex={isOpen('aggregators') ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen('aggregators') ? false : 'aggregators' }))} setValue={v => actions.updateProp('aggregatorName', v)} />
-                  <a role="button" className="pvtRowOrder" onClick={() => actions.updateProp('rowOrder', sortIcons[rowOrder].next)}>{sortIcons[rowOrder].rowSymbol}</a>
-                  <a role="button" className="pvtColOrder" onClick={() => actions.updateProp('colOrder', sortIcons[colOrder].next)}>{sortIcons[colOrder].colSymbol}</a>
-                  {numValsAllowed > 0 && <br />}
-                  {new Array(numValsAllowed).fill(null).map((_, i) => [
-                    <Dropdown key={i} current={vals[i]} values={Object.keys(pivotState.attrValues).filter(e => !hiddenAttributes.includes(e) && !hiddenFromAggregators.includes(e))} open={isOpen(`val${i}`)} zIndex={isOpen(`val${i}`) ? uiState.maxZIndex + 1 : 1} toggle={() => setUiState(s => ({ ...s, openDropdown: isOpen(`val${i}`) ? false : `val${i}` }))} setValue={value => { const newVals = [...vals]; newVals[i] = value; actions.updateProp('vals', newVals); }} />,
-                    i + 1 !== numValsAllowed ? <br key={`br${i}`} /> : null,
-                  ])}
-                </td>
+                <td className="pvtRenderers">{rendererDropdown}</td>
+                <td className="pvtVals">{aggControls}</td>
                 <DnDCell id="cols" items={colAttrs} classes="pvtAxisContainer pvtHorizList pvtCols" isHorizontal={true} {...sharedCellProps} />
               </tr>
               <tr>
-                <DnDCell id="unused" items={unusedAttrs} classes={`pvtAxisContainer pvtUnused pvtVertList`} isHorizontal={false} {...sharedCellProps} />
+                <DnDCell id="unused" items={unusedAttrs} classes="pvtAxisContainer pvtUnused pvtVertList" isHorizontal={false} {...sharedCellProps} />
                 <DnDCell id="rows" items={rowAttrs} classes="pvtAxisContainer pvtVertList pvtRows" isHorizontal={false} {...sharedCellProps} />
-                <td className="pvtOutput">
-                  <PivotTable {...componentProps} />
-                  {pagination && renderFooter()}
-                </td>
+                {outputCell}
               </tr>
             </>
           )}

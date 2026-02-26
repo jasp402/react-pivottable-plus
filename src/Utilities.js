@@ -1,18 +1,6 @@
 import PropTypes from 'prop-types';
 
-/*
- * decaffeinate suggestions:
- * DS101: Remove unnecessary use of Array.from
- * DS102: Remove unnecessary code created because of implicit returns
- * DS104: Avoid inline assignments
- * DS201: Simplify complex destructure assignments
- * DS203: Remove `|| {}` from converted for-own loops
- * DS205: Consider reworking code to avoid use of IIFEs
- * DS207: Consider shorter variations of null checks
- * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
- */
-
-const addSeparators = function(nStr, thousandsSep, decimalSep) {
+const addSeparators = function (nStr, thousandsSep, decimalSep) {
   const x = String(nStr).split('.');
   let x1 = x[0];
   const x2 = x.length > 1 ? decimalSep + x[1] : '';
@@ -23,7 +11,7 @@ const addSeparators = function(nStr, thousandsSep, decimalSep) {
   return x1 + x2;
 };
 
-const numberFormat = function(opts_in) {
+const numberFormat = function (opts_in) {
   const defaults = {
     digitsAfterDecimal: 2,
     scaler: 1,
@@ -33,7 +21,7 @@ const numberFormat = function(opts_in) {
     suffix: '',
   };
   const opts = Object.assign({}, defaults, opts_in);
-  return function(x) {
+  return function (x) {
     if (isNaN(x) || !isFinite(x)) {
       return '';
     }
@@ -121,7 +109,7 @@ const naturalSort = (as, bs) => {
   return a.length - b.length;
 };
 
-const sortAs = function(order) {
+const sortAs = function (order) {
   const mapping = {};
 
   // sort lowercased keys similarly
@@ -133,7 +121,7 @@ const sortAs = function(order) {
       l_mapping[x.toLowerCase()] = i;
     }
   }
-  return function(a, b) {
+  return function (a, b) {
     if (a in mapping && b in mapping) {
       return mapping[a] - mapping[b];
     } else if (a in mapping) {
@@ -151,7 +139,7 @@ const sortAs = function(order) {
   };
 };
 
-const getSort = function(sorters, attr) {
+const getSort = function (sorters, attr) {
   if (sorters) {
     if (typeof sorters === 'function') {
       const sort = sorters(attr);
@@ -167,7 +155,7 @@ const getSort = function(sorters, attr) {
 
 // aggregator templates default to US number formatting but this is overrideable
 const usFmt = numberFormat();
-const usFmtInt = numberFormat({digitsAfterDecimal: 0});
+const usFmtInt = numberFormat({ digitsAfterDecimal: 0 });
 const usFmtPct = numberFormat({
   digitsAfterDecimal: 1,
   scaler: 100,
@@ -177,7 +165,7 @@ const usFmtPct = numberFormat({
 const aggregatorTemplates = {
   count(formatter = usFmtInt) {
     return () =>
-      function() {
+      function () {
         return {
           count: 0,
           push() {
@@ -192,8 +180,8 @@ const aggregatorTemplates = {
   },
 
   uniques(fn, formatter = usFmtInt) {
-    return function([attr]) {
-      return function() {
+    return function ([attr]) {
+      return function () {
         return {
           uniq: [],
           push(record) {
@@ -212,8 +200,8 @@ const aggregatorTemplates = {
   },
 
   sum(formatter = usFmt) {
-    return function([attr]) {
-      return function() {
+    return function ([attr]) {
+      return function () {
         return {
           sum: 0,
           push(record) {
@@ -232,8 +220,8 @@ const aggregatorTemplates = {
   },
 
   extremes(mode, formatter = usFmt) {
-    return function([attr]) {
-      return function(data) {
+    return function ([attr]) {
+      return function (data) {
         return {
           val: null,
           sorter: getSort(
@@ -277,8 +265,8 @@ const aggregatorTemplates = {
   },
 
   quantile(q, formatter = usFmt) {
-    return function([attr]) {
-      return function() {
+    return function ([attr]) {
+      return function () {
         return {
           vals: [],
           push(record) {
@@ -303,8 +291,8 @@ const aggregatorTemplates = {
   },
 
   runningStat(mode = 'mean', ddof = 1, formatter = usFmt) {
-    return function([attr]) {
-      return function() {
+    return function ([attr]) {
+      return function () {
         return {
           n: 0.0,
           m: 0.0,
@@ -349,8 +337,8 @@ const aggregatorTemplates = {
   },
 
   sumOverSum(formatter = usFmt) {
-    return function([num, denom]) {
-      return function() {
+    return function ([num, denom]) {
+      return function () {
         return {
           sumNum: 0,
           sumDenom: 0,
@@ -375,9 +363,9 @@ const aggregatorTemplates = {
 
   fractionOf(wrapped, type = 'total', formatter = usFmtPct) {
     return (...x) =>
-      function(data, rowKey, colKey) {
+      function (data, rowKey, colKey) {
         return {
-          selector: {total: [[], []], row: [rowKey, []], col: [[], colKey]}[
+          selector: { total: [[], []], row: [rowKey, []], col: [[], colKey] }[
             type
           ],
           inner: wrapped(...Array.from(x || []))(data, rowKey, colKey),
@@ -492,12 +480,12 @@ const derivers = {
     dayNames = dayNamesEn
   ) {
     const utc = utcOutput ? 'UTC' : '';
-    return function(record) {
+    return function (record) {
       const date = new Date(Date.parse(record[col]));
       if (isNaN(date)) {
         return '';
       }
-      return formatString.replace(/%(.)/g, function(m, p) {
+      return formatString.replace(/%(.)/g, function (m, p) {
         switch (p) {
           case 'y':
             return date[`get${utc}FullYear`]();
@@ -600,18 +588,10 @@ class PivotData {
   }
 
   arrSort(attrs) {
-    let a;
-    const sortersArr = (() => {
-      const result = [];
-      for (a of Array.from(attrs)) {
-        result.push(getSort(this.props.sorters, a));
-      }
-      return result;
-    })();
-    return function(a, b) {
-      for (const i of Object.keys(sortersArr || {})) {
-        const sorter = sortersArr[i];
-        const comparison = sorter(a[i], b[i]);
+    const sortersArr = attrs.map(a => getSort(this.props.sorters, a));
+    return function (a, b) {
+      for (let i = 0; i < sortersArr.length; i++) {
+        const comparison = sortersArr[i](a[i], b[i]);
         if (comparison !== 0) {
           return comparison;
         }
@@ -661,10 +641,10 @@ class PivotData {
     // this code is called in a tight loop
     const colKey = [];
     const rowKey = [];
-    for (const x of Array.from(this.props.cols)) {
+    for (const x of this.props.cols) {
       colKey.push(x in record ? record[x] : 'null');
     }
-    for (const x of Array.from(this.props.rows)) {
+    for (const x of this.props.rows) {
       rowKey.push(x in record ? record[x] : 'null');
     }
     const flatRowKey = rowKey.join(String.fromCharCode(0));
@@ -752,12 +732,12 @@ class PivotData {
 }
 
 // can handle arrays or jQuery selections of tables
-PivotData.forEachRecord = function(input, derivedAttributes, f) {
+PivotData.forEachRecord = function (input, derivedAttributes, f) {
   let addRecord, record;
   if (Object.getOwnPropertyNames(derivedAttributes).length === 0) {
     addRecord = f;
   } else {
-    addRecord = function(record) {
+    addRecord = function (record) {
       for (const k in derivedAttributes) {
         const derived = derivedAttributes[k](record);
         if (derived !== null) {
@@ -773,32 +753,24 @@ PivotData.forEachRecord = function(input, derivedAttributes, f) {
     return input(addRecord);
   } else if (Array.isArray(input)) {
     if (Array.isArray(input[0])) {
-      // array of arrays
-      return (() => {
-        const result = [];
-        for (const i of Object.keys(input || {})) {
-          const compactRecord = input[i];
-          if (i > 0) {
-            record = {};
-            for (const j of Object.keys(input[0] || {})) {
-              const k = input[0][j];
-              record[k] = compactRecord[j];
-            }
-            result.push(addRecord(record));
-          }
+      // array of arrays — first row is headers
+      const headers = input[0];
+      for (let i = 1; i < input.length; i++) {
+        const compactRecord = input[i];
+        record = {};
+        for (let j = 0; j < headers.length; j++) {
+          record[headers[j]] = compactRecord[j];
         }
-        return result;
-      })();
+        addRecord(record);
+      }
+      return;
     }
 
     // array of objects
-    return (() => {
-      const result1 = [];
-      for (record of Array.from(input)) {
-        result1.push(addRecord(record));
-      }
-      return result1;
-    })();
+    for (const rec of input) {
+      addRecord(rec);
+    }
+    return;
   }
   throw new Error('unknown input format');
 };
