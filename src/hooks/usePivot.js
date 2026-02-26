@@ -11,6 +11,9 @@ import { SortModule } from '../modules/SortModule';
  */
 export function usePivot(initialProps) {
   const engineRef = useRef(null);
+  // Guard: evita que el useEffect re-sincronice props cuando el cambio
+  // se originó internamente (ej: drag & drop), previniendo el bucle infinito.
+  const _internalUpdateRef = useRef(false);
 
   if (!engineRef.current) {
     engineRef.current = new PivotEngine({
@@ -19,8 +22,15 @@ export function usePivot(initialProps) {
     });
   }
 
-  // Sincronizar props externas clave
+  // Sincronizar props externas clave.
+  // El guard _internalUpdateRef evita el bucle: cuando el drag & drop actualiza
+  // rows/cols internamente y el usuario llama onChange → las props cambian →
+  // este effect no debe re-sincronizar porque el engine ya tiene el estado correcto.
   useEffect(() => {
+    if (_internalUpdateRef.current) {
+      _internalUpdateRef.current = false;
+      return;
+    }
     const sanitized = {};
     const allKeys = Object.keys(initialProps);
     for (const key of allKeys) {
@@ -53,6 +63,7 @@ export function usePivot(initialProps) {
     actions: {
       setProps: (newProps) => engineRef.current.gridApi.updateConfig(newProps),
       updateProp: (key, value) => {
+        _internalUpdateRef.current = true;
         if (key === 'rows') {
           engineRef.current.gridApi.setRows(value);
         } else if (key === 'cols') {
@@ -61,11 +72,20 @@ export function usePivot(initialProps) {
           engineRef.current.gridApi.updateConfig({ [key]: value });
         }
       },
+      // batchUpdate: actualiza rows, cols y/o unusedOrder en una única notificación
+      // para evitar bucles de re-render durante el drag & drop entre zonas.
+      batchUpdate: (patch) => {
+        _internalUpdateRef.current = true;
+        engineRef.current.gridApi.batchUpdate(patch);
+      },
       toggleFilter: (attr, value) => engineRef.current.gridApi.toggleFilter(attr, value),
       setValuesInFilter: (attr, values) => engineRef.current.gridApi.setFilter(attr, values),
       addValuesToFilter: (attr, values) => engineRef.current.gridApi.addValuesToFilter(attr, values),
       removeValuesFromFilter: (attr, values) => engineRef.current.gridApi.removeValuesFromFilter(attr, values),
-      setUnusedOrder: (order) => engineRef.current.gridApi.setUnusedOrder(order),
+      setUnusedOrder: (order) => {
+        _internalUpdateRef.current = true;
+        engineRef.current.gridApi.setUnusedOrder(order);
+      },
     },
     // Nuevo: exponer gridApi y columnApi
     gridApi: engineRef.current.gridApi,

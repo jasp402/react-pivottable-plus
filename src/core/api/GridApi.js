@@ -86,6 +86,25 @@ export class GridApi {
         this._engine._notifyStateChanged();
     }
 
+    /**
+     * Aplica múltiples cambios de dimensión en una única notificación atómica.
+     * Evita bucles de re-render al mover campos entre zonas durante el drag & drop.
+     * @param {object} patch - Objeto con las claves a actualizar: { rows?, cols?, unusedOrder? }
+     */
+    batchUpdate(patch) {
+        const { unusedOrder, ...configPatch } = patch;
+        if (Object.keys(configPatch).length > 0) {
+            this._engine.stateManager.updateConfig(configPatch);
+        }
+        if (unusedOrder !== undefined) {
+            this._engine.stateManager.computed.unusedOrder = unusedOrder;
+            this._engine.stateManager._snapshotVersion++;
+            this._engine.stateManager._snapshot = null;
+        }
+        this._engine.eventBus.emit('dimensionMoved', configPatch);
+        this._engine._notifyStateChanged();
+    }
+
     // ─── Events ───────────────────────────────────────────────────────────────────
     addEventListener(event, callback) {
         return this._engine.eventBus.on(event, callback);
