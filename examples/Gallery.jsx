@@ -13,6 +13,7 @@ import { Layout, Box, Palette, Zap } from 'lucide-react';
 import './tailwind-base.css';
 import '../src/pivottable.css';
 import '../src/grouping.css';
+import { useColumnResize } from '../src/hooks/useColumnResize';
 
 // Initialize Plotly (assuming window.Plotly is available or use a fallback)
 const Plot = createPlotlyComponent(window.Plotly || {});
@@ -72,7 +73,10 @@ const Gallery = () => {
     size: 'lg',
     enableCellPipeline: false,
     enableVirtualization: false,
+    enableColumnResize: false,
   });
+
+  const [columnWidths, setColumnWidths] = useState({});
 
   const renderActiveUI = () => {
     // ─── Cell Pipeline: formateo y estilos condicionales ───
@@ -111,6 +115,9 @@ const Gallery = () => {
       size: uiConfig.size,
       cellPipeline: cellPipelineConfig,
       virtualization: virtConfig,
+      columnResizing: uiConfig.enableColumnResize,
+      columnWidths,
+      onColumnWidthChange: setColumnWidths,
       onChange: setPivotState
     };
 
@@ -194,6 +201,16 @@ const Gallery = () => {
                   className="w-4 h-4 text-blue-500 rounded border-slate-300 focus:ring-blue-500"
                 />
                 ⚡ Virtualización
+              </label>
+
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 bg-white px-3 py-2 border border-slate-200 rounded-lg shadow-sm cursor-pointer hover:bg-slate-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={uiConfig.enableColumnResize}
+                  onChange={e => setUiConfig({ ...uiConfig, enableColumnResize: e.target.checked })}
+                  className="w-4 h-4 text-purple-500 rounded border-slate-300 focus:ring-purple-500"
+                />
+                ↔ Column Resize
               </label>
 
               <div className="w-px h-8 bg-slate-200 mx-2"></div>

@@ -43,7 +43,8 @@ export function usePivot(initialProps) {
   // Suscribirse a cambios del engine
   const snapshot = useSyncExternalStore(
     useCallback((onStoreChange) => engineRef.current.subscribe(onStoreChange), []),
-    useCallback(() => engineRef.current.getSnapshot(), [])
+    useCallback(() => engineRef.current.getSnapshot(), []), // getSnapshot
+    useCallback(() => engineRef.current.getSnapshot(), [])  // getServerSnapshot
   );
 
   return {

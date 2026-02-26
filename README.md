@@ -34,6 +34,8 @@ npm install --save react-pivottable-plus react react-dom
 Gracias a las últimas optimizaciones, implementar la tabla dinámica es más sencillo que nunca. La mayoría de las propiedades ya tienen valores por defecto inteligentes.
 
 ```jsx
+"use client";
+
 import React, { useState } from 'react';
 import PivotTableUI from 'react-pivottable-plus'; // Importación directa
 import 'react-pivottable-plus/pivottable.css';

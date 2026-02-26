@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { PivotData, sortAs, getSort, aggregators as defaultAggregators } from './Utilities';
@@ -314,6 +316,9 @@ const PivotTableUI = props => {
     rowOrder = 'key_a_to_z',
     colOrder = 'key_a_to_z',
     size = 'lg',
+    columnResizing = false,
+    columnWidths = {},
+    onColumnWidthChange,
   } = pivotProps;
 
   const unusedAttrs = Object.keys(pivotState.attrValues)
@@ -437,6 +442,9 @@ const PivotTableUI = props => {
     derivedAttributes: pivotProps.derivedAttributes,
     cellPipeline: pivotProps.cellPipeline,
     virtualization: pivotProps.virtualization,
+    columnResizing,
+    columnWidths,
+    onColumnWidthChange,
   };
 
   const renderFooter = () => {
@@ -543,6 +551,9 @@ PivotTableUI.propTypes = Object.assign({}, PivotData.propTypes, {
   rendererName: PropTypes.string,
   renderers: PropTypes.objectOf(PropTypes.func),
   size: PropTypes.oneOf(['sm', 'md', 'lg']),
+  columnResizing: PropTypes.bool,
+  columnWidths: PropTypes.object,
+  onColumnWidthChange: PropTypes.func,
 });
 
 PivotTableUI.defaultProps = Object.assign({}, PivotData.defaultProps, {
@@ -554,6 +565,8 @@ PivotTableUI.defaultProps = Object.assign({}, PivotData.defaultProps, {
   menuLimit: 500,
   rendererName: 'Table',
   renderers: TableRenderers,
+  columnResizing: false,
+  columnWidths: {},
 });
 
 export default PivotTableUI;

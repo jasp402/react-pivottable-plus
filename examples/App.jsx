@@ -107,6 +107,9 @@ class PivotTableUISmartWrapper extends React.PureComponent {
                 size={this.props.size}
                 cellPipeline={cellPipelineConfig}
                 virtualization={virtConfig}
+                columnResizing={this.props.enableColumnResize}
+                columnWidths={this.props.columnWidths}
+                onColumnWidthChange={this.props.onColumnWidthChange}
                 unusedOrientationCutoff={Infinity}
             />
         );
@@ -121,6 +124,8 @@ export default class App extends React.Component {
             size: 'lg',
             enableCellPipeline: false,
             enableVirtualization: false,
+            enableColumnResize: false,
+            columnWidths: {},
             pivotState: {
                 data: tips,
                 rows: ['Day of Week', 'Party Size'],
@@ -250,6 +255,15 @@ export default class App extends React.Component {
                             />
                             ⚡ Virtualización
                         </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', fontWeight: 500, color: '#475569', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={this.state.enableColumnResize}
+                                onChange={e => this.setState({ enableColumnResize: e.target.checked })}
+                                style={{ accentColor: '#8b5cf6' }}
+                            />
+                            ↔ Column Resize
+                        </label>
                         <span style={{ fontSize: '20px', marginRight: '4px' }} title="Table Size Configuration">⚙️</span>
                         <select
                             value={this.state.size || 'lg'}
@@ -272,6 +286,9 @@ export default class App extends React.Component {
                         size={this.state.size}
                         enableCellPipeline={this.state.enableCellPipeline}
                         enableVirtualization={this.state.enableVirtualization}
+                        enableColumnResize={this.state.enableColumnResize}
+                        columnWidths={this.state.columnWidths}
+                        onColumnWidthChange={cw => this.setState({ columnWidths: cw })}
                         {...this.state.pivotState}
                         onChange={s => this.setState({ pivotState: s })}
                     />

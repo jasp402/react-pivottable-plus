@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { PivotData } from './Utilities';
 import { CellPipeline } from './core/CellPipeline';
 import { VirtualScroller } from './core/VirtualScroller';
+import { useColumnResize } from './hooks/useColumnResize';
 
 // helper function for setting row/col-span in pivotTableRenderer
 const spanSize = function (arr, i, j, no_loop = false) {
@@ -61,7 +62,8 @@ const remove = (set, arr) => (arr.forEach(set.delete, set) || set);
 const toggle = (set, arr) => (has(set, arr) ? remove : add)(set, arr);
 
 function makeRenderer(opts = {}) {
-  class TableRenderer extends React.PureComponent {
+  // ─── Inner class (toda la lógica de render) ──────────────────────
+  class TableRendererInner extends React.PureComponent {
     render() {
       const pivotData = new PivotData(this.props);
       const id = pivotData.props.id;
@@ -230,8 +232,35 @@ function makeRenderer(opts = {}) {
         });
       } : null;
 
+      // ─── Column widths (resize) ────────────────────────────────
+      const resizeWidths = this.props._resizeWidths || {};
+      const onStartResize = this.props._onStartResize || null;
+
+      // Construir colgroup con anchos de todas las columnas de datos
+      const buildColgroup = () => {
+        const cols = [];
+        // Col para row numbers
+        if (showRowNumbers) cols.push(<col key="col-rownum" style={{ width: '40px', minWidth: '40px' }} />);
+        // Cols para rowAttrs
+        rowAttrs.forEach((_, i) => cols.push(<col key={`col-rowattr-${i}`} />));
+        // Col padding virtual izquierdo
+        if (shouldVirt.cols && colLeftPad > 0) cols.push(<col key="col-virt-left" style={{ width: colLeftPad }} />);
+        // Cols para cada columna de datos
+        visibleColKeys.forEach((colKey) => {
+          const label = colKey.join('\u0000');
+          const w = resizeWidths[label];
+          cols.push(<col key={`col-data-${label}`} style={w ? { width: w, minWidth: w } : undefined} />);
+        });
+        // Col padding virtual derecho
+        if (shouldVirt.cols && colRightPad > 0) cols.push(<col key="col-virt-right" style={{ width: colRightPad }} />);
+        // Col para totales
+        cols.push(<col key="col-totals" />);
+        return <colgroup>{cols}</colgroup>;
+      };
+
       const tableContent = (
-        <table id={id} className={`pvtTable ${rbClass} ${cbClass}`}>
+        <table id={id} className={`pvtTable ${rbClass} ${cbClass}${onStartResize ? ' pvtResizable' : ''}`}>
+          {buildColgroup()}
           <thead>
             {colAttrs.map(function (c, j) {
               const clickable = grouping && colAttrs.length > j + 1;
@@ -255,19 +284,28 @@ function makeRenderer(opts = {}) {
                     if (x === -1) {
                       return null;
                     }
+                    // Usar el colKey completo como clave de resize solo en la última fila de headers
+                    const isLastHeaderRow = j === colAttrs.length - 1;
+                    const colLabel = colKey.join('\u0000');
                     return (
                       <th
                         className={"pvtColLabel" + clickClass(clickable && colKey[j], isFolded([colKey.slice(0, j + 1)]))}
                         key={`colKey-${i}-${j}-${colKey[j]}`}
                         colSpan={x}
                         rowSpan={
-                          j === colAttrs.length - 1 && rowAttrs.length !== 0
+                          isLastHeaderRow && rowAttrs.length !== 0
                             ? 2
                             : 1
                         }
                         onClick={clickable && colKey[j] ? _ => fold([colKey.slice(0, j + 1)]) : null}
                       >
                         {colKey[j]}
+                        {onStartResize && isLastHeaderRow && (
+                          <span
+                            className="pvtResizeHandle"
+                            onPointerDown={e => onStartResize(colLabel, e)}
+                          />
+                        )}
                       </th>
                     );
                   })}
@@ -499,16 +537,45 @@ function makeRenderer(opts = {}) {
     }
   }
 
-  TableRenderer.defaultProps = PivotData.defaultProps;
-  TableRenderer.propTypes = PivotData.propTypes;
-  TableRenderer.defaultProps.tableColorScaleGenerator = redColorScaleGenerator;
-  TableRenderer.defaultProps.tableOptions = {};
-  TableRenderer.propTypes.tableColorScaleGenerator = PropTypes.func;
-  TableRenderer.propTypes.tableOptions = PropTypes.object;
-  TableRenderer.defaultProps.compactRows = true;
-  TableRenderer.propTypes.compactRows = PropTypes.bool;
-  TableRenderer.defaultProps.showRowNumbers = true;
-  TableRenderer.propTypes.showRowNumbers = PropTypes.bool;
+  TableRendererInner.defaultProps = PivotData.defaultProps;
+  TableRendererInner.propTypes = PivotData.propTypes;
+  TableRendererInner.defaultProps.tableColorScaleGenerator = redColorScaleGenerator;
+  TableRendererInner.defaultProps.tableOptions = {};
+  TableRendererInner.propTypes.tableColorScaleGenerator = PropTypes.func;
+  TableRendererInner.propTypes.tableOptions = PropTypes.object;
+  TableRendererInner.defaultProps.compactRows = true;
+  TableRendererInner.propTypes.compactRows = PropTypes.bool;
+  TableRendererInner.defaultProps.showRowNumbers = true;
+  TableRendererInner.propTypes.showRowNumbers = PropTypes.bool;
+  // Resize props (pasadas internamente desde el wrapper)
+  TableRendererInner.propTypes._resizeWidths = PropTypes.object;
+  TableRendererInner.propTypes._onStartResize = PropTypes.func;
+
+  // ─── Wrapper funcional para poder usar hooks ─────────────────────
+  function TableRenderer(props) {
+    const resizing = props.columnResizing === true;
+    const { widths, startResize } = useColumnResize({
+      initialWidths: props.columnWidths || {},
+      minWidth: 50,
+      onWidthChange: props.onColumnWidthChange,
+    });
+    return (
+      <TableRendererInner
+        {...props}
+        _resizeWidths={resizing ? widths : {}}
+        _onStartResize={resizing ? startResize : null}
+      />
+    );
+  }
+
+  TableRenderer.defaultProps = { ...TableRendererInner.defaultProps, columnResizing: false, columnWidths: {} };
+  TableRenderer.propTypes = {
+    ...TableRendererInner.propTypes,
+    columnResizing: PropTypes.bool,
+    columnWidths: PropTypes.object,
+    onColumnWidthChange: PropTypes.func,
+  };
+
   return TableRenderer;
 }
 

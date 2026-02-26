@@ -495,3 +495,59 @@ table.pvtTable tr.pvtEmptyRow .pvtRowNumber {
     --pvt-font-size: 14px !important;
     --pvt-row-height: 42px !important;
 }
+
+/* ─── Column Resize ───────────────────────────────────── */
+
+/* Las th de cabecera deben ser position: relative para anclar el handle */
+table.pvtTable thead th {
+    position: relative;
+}
+
+/* El handle es una franja interactiva en el borde derecho del th */
+.pvtResizeHandle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    /* Ampliado para que sea más fácil de clickear */
+    cursor: col-resize;
+    user-select: none;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* El 'cosito' que se pone entre las lineas */
+.pvtResizeHandle::after {
+    content: "";
+    width: 2px;
+    height: 50%;
+    background-color: var(--pvt-border-color);
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+/* Muestra un indicador visual interactivo al hover */
+.pvtResizeHandle:hover::after,
+.pvtResizeHandle:active::after {
+    background-color: #119dff;
+    opacity: 1;
+    height: 100%;
+    width: 3px;
+}
+
+/* Durante el resize activo (clase en la tabla entera) */
+table.pvtTable.pvtResizable {
+    width: max-content;
+    min-width: 100%;
+}
+
+/* Forzar cursor de resize mientras arrastras */
+body.pvt-is-resizing,
+body.pvt-is-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+}
