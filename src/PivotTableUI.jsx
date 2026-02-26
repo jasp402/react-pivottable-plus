@@ -422,8 +422,19 @@ const PivotTableUI = props => {
     activeList.splice(activeIndex, 1);
     const insertAt = overIndex >= 0 ? overIndex : overList.length;
     overList.splice(insertAt, 0, active.id);
-    getUpdaterByZone(activeZone)(activeList);
-    getUpdaterByZone(overZone)(overList);
+
+    // ── Construir el patch atómico para evitar múltiples re-renders ──
+    // Problema: dos llamadas separadas (updateProp + updateProp) disparaban dos
+    // notificaciones de estado consecutivas, causando el React error #185
+    // (Maximum update depth exceeded). batchUpdate aplica ambos cambios en uno.
+    const patch = {};
+    if (activeZone === 'rows') patch.rows = activeList;
+    else if (activeZone === 'cols') patch.cols = activeList;
+    else if (activeZone === 'unused') patch.unusedOrder = activeList;
+    if (overZone === 'rows') patch.rows = overList;
+    else if (overZone === 'cols') patch.cols = overList;
+    else if (overZone === 'unused') patch.unusedOrder = overList;
+    actions.batchUpdate(patch);
   };
 
   const handleDragEnd = ({ active, over }) => {
@@ -436,7 +447,14 @@ const PivotTableUI = props => {
       const list = getListByZone(activeZone);
       const oldIndex = list.indexOf(active.id);
       const newIndex = list.indexOf(over.id);
-      if (oldIndex !== newIndex) getUpdaterByZone(activeZone)(arrayMove(list, oldIndex, newIndex));
+      if (oldIndex !== newIndex) {
+        const reordered = arrayMove(list, oldIndex, newIndex);
+        const patch = {};
+        if (activeZone === 'rows') patch.rows = reordered;
+        else if (activeZone === 'cols') patch.cols = reordered;
+        else if (activeZone === 'unused') patch.unusedOrder = reordered;
+        actions.batchUpdate(patch);
+      }
     }
   };
 
