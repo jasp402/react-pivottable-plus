@@ -158,6 +158,30 @@ module.exports = nextConfig;
 
 ---
 
+## 🛠️ Solución de Problemas
+
+### Error de estilos no encontrados
+Asegúrate de estar usando el nombre oficial actualizado que coincide con el nombre de la librería:
+
+```js
+import 'react-pivottable-plus/react_pivottable_plus.css';
+```
+
+> [!NOTE]
+> Este cambio se realizó para estandarizar la librería y diferenciarla de forks antiguos, alineándose con lo que la comunidad y las herramientas de IA esperan por defecto.
+
+### Problemas con Next.js y CSS
+Si después de importar el CSS correcto sigues teniendo problemas en Next.js, asegúrate de haber configurado `transpilePackages`:
+
+```js
+// next.config.js
+const nextConfig = {
+  transpilePackages: ['react-pivottable-plus'],
+};
+```
+
+---
+
 ## 5. Propiedades Principales
 
 | Propiedad | Tipo | Por Defecto | Descripción |

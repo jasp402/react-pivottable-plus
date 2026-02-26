@@ -1,0 +1,553 @@
+:root {
+    --pvt-border-color: #BABFC7;
+    --pvt-header-bg: #F8F8F8;
+    --pvt-total-bg: #E9E9E9;
+    --pvt-row-hover-bg: #F5F7F7;
+    --pvt-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --pvt-font-size: 14px;
+    --pvt-font-weight-header: 600;
+    --pvt-font-weight-total: 700;
+    --pvt-row-height: 42px;
+    --pvt-text-color: #181d1f;
+    --pvt-text-color-muted: #6f7c87;
+}
+
+.pvtUi {
+    color: var(--pvt-text-color);
+    font-family: var(--pvt-font-family);
+    border-collapse: collapse;
+}
+
+.pvtUi select {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -ms-user-select: none;
+}
+
+.pvtUi td.pvtOutput {
+    vertical-align: top;
+    padding: 0;
+}
+
+/* ag-Grid Alpine Theme Pivot Table Styles */
+table.pvtTable {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-family: var(--pvt-font-family);
+    font-size: var(--pvt-font-size);
+    color: var(--pvt-text-color);
+    border-top: 1px solid var(--pvt-border-color);
+    border-left: 1px solid var(--pvt-border-color);
+    margin: 0;
+}
+
+table.pvtTable * {
+    box-sizing: border-box;
+}
+
+table.pvtTable th,
+table.pvtTable td {
+    height: var(--pvt-row-height);
+    line-height: var(--pvt-row-height);
+    padding: 0 12px;
+    border-right: 1px solid var(--pvt-border-color);
+    border-bottom: 1px solid var(--pvt-border-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: normal;
+    font-size: var(--pvt-font-size);
+}
+
+/* Header Styles */
+table.pvtTable thead tr th,
+table.pvtTable .pvtAxisLabel,
+table.pvtTable .pvtColLabel,
+table.pvtTable .pvtRowLabel {
+    background-color: var(--pvt-header-bg);
+    font-weight: var(--pvt-font-weight-header);
+    color: var(--pvt-text-color);
+    text-align: left;
+}
+
+table.pvtTable thead tr:last-child th {
+    border-bottom: 2px solid var(--pvt-border-color);
+}
+
+table.pvtTable .pvtColLabel {
+    text-align: center;
+}
+
+/* Totals Styles */
+table.pvtTable .pvtTotal,
+table.pvtTable .pvtGrandTotal,
+table.pvtTable .pvtTotalLabel {
+    background-color: var(--pvt-total-bg);
+    color: var(--pvt-text-color);
+    font-weight: var(--pvt-font-weight-header);
+}
+
+table.pvtTable .pvtGrandTotal,
+table.pvtTable tr:last-child td.pvtTotal,
+table.pvtTable tr:last-child th.pvtTotalLabel {
+    font-weight: var(--pvt-font-weight-total);
+}
+
+/* Thick Border Separators for Totals */
+table.pvtTable tr:last-child th,
+table.pvtTable tr:last-child td {
+    border-top: 2px solid var(--pvt-border-color);
+}
+
+table.pvtTable td.pvtTotal,
+table.pvtTable td.pvtGrandTotal {
+    border-left: 2px solid var(--pvt-border-color);
+}
+
+/* Numeric Alignment */
+.pvtVal-numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Data Row Hover */
+table.pvtTable tr.pvtRow-data:hover td {
+    background-color: var(--pvt-row-hover-bg);
+}
+
+/* Empty cells */
+table.pvtTable td:empty {
+    background-color: #fff;
+}
+
+/* UI Components (Keep existing logic but align styles) */
+.pvtRowOrder,
+.pvtColOrder {
+    cursor: pointer;
+    width: 15px;
+    margin-left: 5px;
+    display: inline-block;
+    user-select: none;
+    text-decoration: none !important;
+}
+
+
+.pvtAxisContainer,
+.pvtVals {
+    border: 1px solid #a2b1c6;
+    background: #f2f5fa;
+    padding: 5px;
+    min-width: 20px;
+    min-height: 20px;
+}
+
+.pvtRenderers {
+    padding-left: 5px;
+    user-select: none;
+}
+
+.pvtDropdown {
+    display: inline-block;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -ms-user-select: none;
+    margin: 3px;
+}
+
+.pvtDropdownIcon {
+    float: right;
+    color: #a2b1c6;
+}
+
+.pvtDropdownCurrent {
+    text-align: left;
+    border: 1px solid #a2b1c6;
+    border-radius: 4px;
+    display: inline-block;
+    position: relative;
+    width: 210px;
+    box-sizing: border-box;
+    background: white;
+}
+
+.pvtDropdownCurrentOpen {
+    border-radius: 4px 4px 0 0;
+}
+
+.pvtDropdownMenu {
+    background: white;
+    position: absolute;
+    width: 100%;
+    margin-top: -1px;
+    border-radius: 0 0 4px 4px;
+    border: 1px solid #a2b1c6;
+    border-top: 1px solid #dfe8f3;
+    box-sizing: border-box;
+}
+
+.pvtDropdownValue {
+    padding: 2px 5px;
+    font-size: 12px;
+    text-align: left;
+}
+
+.pvtDropdownActiveValue {
+    background: #ebf0f8;
+}
+
+.pvtVals {
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: top;
+    padding-bottom: 12px;
+}
+
+.pvtRows {
+    height: 35px;
+}
+
+.pvtAxisContainer li {
+    padding: 8px 6px;
+    list-style-type: none;
+    cursor: move;
+}
+
+.pvtAxisContainer li.pvtPlaceholder {
+    -webkit-border-radius: 5px;
+    padding: 3px 15px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    border: 1px dashed #a2b1c6;
+}
+
+.pvtAxisContainer li.pvtPlaceholder span.pvtAttr {
+    display: none;
+}
+
+.pvtAxisContainer li span.pvtAttr {
+    -webkit-text-size-adjust: 100%;
+    background: #f3f6fa;
+    border: 1px solid #c8d4e3;
+    padding: 2px 5px;
+    white-space: nowrap;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -ms-user-select: none;
+}
+
+.pvtTriangle {
+    cursor: pointer;
+    color: #506784;
+}
+
+.pvtHorizList li {
+    display: inline-block;
+}
+
+.pvtVertList {
+    vertical-align: top;
+}
+
+.pvtFilteredAttribute {
+    font-style: italic;
+}
+
+.sortable-chosen .pvtFilterBox {
+    display: none !important;
+}
+
+.pvtCloseX {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    font-size: 18px;
+    cursor: pointer;
+    text-decoration: none !important;
+}
+
+.pvtDragHandle {
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    font-size: 18px;
+    cursor: move;
+    color: #a2b1c6;
+}
+
+.pvtButton {
+    color: #506784;
+    border-radius: 5px;
+    padding: 3px 6px;
+    background: #f2f5fa;
+    border: 1px solid;
+    border-color: #c8d4e3;
+    font-size: 14px;
+    margin: 3px;
+    transition: 0.34s all cubic-bezier(0.19, 1, 0.22, 1);
+    text-decoration: none !important;
+}
+
+.pvtButton:hover {
+    background: #e2e8f0;
+    border-color: #a2b1c6;
+}
+
+.pvtButton:active {
+    background: #d1dae6;
+}
+
+.pvtFilterBox input {
+    border: 1px solid #c8d4e3;
+    border-radius: 5px;
+    color: #506784;
+    padding: 0 3px;
+    font-size: 14px;
+}
+
+.pvtFilterBox input:focus {
+    border-color: #119dff;
+    outline: none;
+}
+
+.pvtFilterBox {
+    z-index: 100;
+    width: 300px;
+    border: 1px solid #506784;
+    background-color: #fff;
+    position: absolute;
+    text-align: center;
+    user-select: none;
+    min-height: 100px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -ms-user-select: none;
+}
+
+.pvtFilterBox h4 {
+    margin: 15px;
+}
+
+.pvtFilterBox p {
+    margin: 10px auto;
+}
+
+.pvtFilterBox button {
+    color: #2a3f5f;
+}
+
+.pvtFilterBox input[type='text'] {
+    width: 230px;
+    color: #2a3f5f;
+    margin-bottom: 5px;
+}
+
+.pvtCheckContainer {
+    text-align: left;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow-y: scroll;
+    width: 100%;
+    max-height: 30vh;
+    border-top: 1px solid #dfe8f3;
+}
+
+.pvtCheckContainer p {
+    margin: 0;
+    margin-bottom: 1px;
+    padding: 3px;
+    cursor: default;
+}
+
+.pvtCheckContainer p.selected {
+    background: #ebf0f8;
+}
+
+.pvtOnly {
+    display: none;
+    width: 35px;
+    float: left;
+    font-size: 12px;
+    padding-left: 5px;
+    cursor: pointer;
+}
+
+.pvtOnlySpacer {
+    display: block;
+    width: 35px;
+    float: left;
+}
+
+.pvtCheckContainer p:hover .pvtOnly {
+    display: block;
+}
+
+.pvtCheckContainer p:hover .pvtOnlySpacer {
+    display: none;
+}
+
+.pvtRendererArea {
+    padding: 5px;
+}
+
+.pvtFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 5px;
+    margin-top: 5px;
+    border-top: 1px solid #c8d4e3;
+    color: #506784;
+    font-size: 9pt;
+    font-family: Verdana;
+}
+
+.pvtFooterPagination {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pvtFooterPagination .pvtButton {
+    margin: 0;
+    cursor: pointer;
+    min-width: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.pvtFooterPagination .pvtButton[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pvtPageInput {
+    width: 40px;
+    border: 1px solid #c8d4e3;
+    border-radius: 3px;
+    padding: 2px;
+    text-align: center;
+    color: #2a3f5f;
+}
+
+.pvtPageSize {
+    margin-left: 10px;
+    border: 1px solid #c8d4e3;
+    border-radius: 3px;
+    padding: 2px;
+    color: #2a3f5f;
+    background: white;
+}
+
+/* Row Numbers and Spreadsheet Empty Paddings */
+.pvtRowNumber {
+    background-color: var(--pvt-header-bg);
+    color: var(--pvt-text-color-muted, #6f7c87);
+    text-align: center;
+    font-weight: 500;
+    width: 40px;
+    min-width: 40px;
+    border-right: 1px solid var(--pvt-border-color);
+    border-bottom: 1px solid var(--pvt-border-color);
+    user-select: none;
+}
+
+table.pvtTable tr.pvtEmptyRow td,
+table.pvtTable tr.pvtEmptyRow th {
+    background-color: #fff;
+    border-bottom: 1px solid var(--pvt-border-color);
+    border-right: 1px solid var(--pvt-border-color);
+    height: var(--pvt-row-height);
+    line-height: var(--pvt-row-height);
+}
+
+table.pvtTable tr.pvtEmptyRow .pvtRowNumber {
+    background-color: var(--pvt-header-bg);
+}
+
+/* Size Configurations */
+.pvt-size-sm table.pvtTable th,
+.pvt-size-sm table.pvtTable td {
+    --pvt-font-size: 11px !important;
+    --pvt-row-height: 32px !important;
+}
+
+.pvt-size-md table.pvtTable th,
+.pvt-size-md table.pvtTable td {
+    --pvt-font-size: 13px !important;
+    --pvt-row-height: 36px !important;
+}
+
+.pvt-size-lg table.pvtTable th,
+.pvt-size-lg table.pvtTable td {
+    --pvt-font-size: 14px !important;
+    --pvt-row-height: 42px !important;
+}
+
+/* ─── Column Resize ───────────────────────────────────── */
+
+/* Las th de cabecera deben ser position: relative para anclar el handle */
+table.pvtTable thead th {
+    position: relative;
+}
+
+/* El handle es una franja interactiva en el borde derecho del th */
+.pvtResizeHandle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    /* Ampliado para que sea más fácil de clickear */
+    cursor: col-resize;
+    user-select: none;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* El 'cosito' que se pone entre las lineas */
+.pvtResizeHandle::after {
+    content: "";
+    width: 2px;
+    height: 50%;
+    background-color: var(--pvt-border-color);
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+/* Muestra un indicador visual interactivo al hover */
+.pvtResizeHandle:hover::after,
+.pvtResizeHandle:active::after {
+    background-color: #119dff;
+    opacity: 1;
+    height: 100%;
+    width: 3px;
+}
+
+/* Durante el resize activo (clase en la tabla entera) */
+table.pvtTable.pvtResizable {
+    width: max-content;
+    min-width: 100%;
+}
+
+/* Forzar cursor de resize mientras arrastras */
+body.pvt-is-resizing,
+body.pvt-is-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+}

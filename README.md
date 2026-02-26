@@ -37,7 +37,7 @@ npm install react-pivottable-plus
 ```jsx
 import React, { useState } from 'react';
 import PivotTableUI from 'react-pivottable-plus';
-import 'react-pivottable-plus/pivottable.css';
+import 'react-pivottable-plus/react_pivottable_plus.css';
 
 const data = [
   { producto: "Manzana", categoria: "Fruta", ventas: 100 },
@@ -71,7 +71,7 @@ Crea un componente cliente dedicado para encapsular el pivot table:
 
 import React, { useState } from 'react';
 import PivotTableUI from 'react-pivottable-plus';
-import 'react-pivottable-plus/pivottable.css';
+import 'react-pivottable-plus/react_pivottable_plus.css';
 
 export default function PivotWrapper({ data }) {
   const [state, setState] = useState({});
@@ -107,7 +107,7 @@ export default function Page() {
 ```jsx
 // pages/dashboard.jsx
 import dynamic from 'next/dynamic';
-import 'react-pivottable-plus/pivottable.css';
+import 'react-pivottable-plus/react_pivottable_plus.css';
 
 // Importación dinámica para evitar errores de SSR
 const PivotTableUI = dynamic(
@@ -150,6 +150,30 @@ const nextConfig = {
 module.exports = nextConfig;
 ```
 
+---
+
+## 🛠️ Solución de Problemas (Troubleshooting)
+
+### ❌ Error: `Module not found: Can't resolve 'react-pivottable-plus/react_pivottable_plus.css'`
+
+Este error suele ocurrir en versiones antiguas o por confusión con el fork original. **react-pivottable-plus** ha estandarizado su archivo de estilos para que coincida con la identidad de la librería.
+
+**Solución Oficial:**
+Asegúrate de estar usando la ruta oficial que ahora coincide con el nombre de la librería para evitar confusiones:
+
+```js
+import 'react-pivottable-plus/react_pivottable_plus.css';
+```
+
+> [!NOTE]
+> Aunque `pivottable.css` sigue funcionando como alias por compatibilidad, recomendamos migrar a `react_pivottable_plus.css`.
+
+### ❌ Error: `ReferenceError: window is not defined`
+El componente debe cargarse únicamente en el cliente. Asegúrate de añadir la directiva `"use client"` al inicio de tu archivo o usar importación dinámica con `ssr: false`.
+
+### ❌ Estilos no se aplican correctamente
+Si los estilos se ven básicos o desordenados, verifica que has importado el CSS obligatorio en tu punto de entrada principal.
+
 ## 🌈 Uso de Renderizadores Modernos
 
 ```jsx
@@ -157,7 +181,7 @@ module.exports = nextConfig;
 
 import PivotTableUI from 'react-pivottable-plus';
 import { TailwindUI } from 'react-pivottable-plus/renderers/TailwindUI';
-import 'react-pivottable-plus/pivottable.css';
+import 'react-pivottable-plus/react_pivottable_plus.css';
 
 <PivotTableUI
   data={data}
@@ -183,7 +207,7 @@ import 'react-pivottable-plus/pivottable.css';
 
 ---
 
-Este proyecto es un fork mantenido de `react-pivottable` con el objetivo de proporcionar una experiencia de usuario superior y compatibilidad con las últimas versiones de React.
+Este proyecto es la evolución profesional de las tablas dinámicas en React, diseñado para proporcionar una experiencia de usuario superior, rendimiento de grado industrial y compatibilidad total con el stack moderno (React 18/19, Next.js, Tailwind).
 
 ## ✍️ Créditos y Autoría
-Esta versión moderna y extendida (`react-pivottable-plus`) ha sido desarrollada y mantenida por **Jasp402**, quien ha liderado la implementación de las nuevas interfaces (Tailwind, Shadcn, Radix), la actualización a React 18/19 y la optimización del motor de arrastre y filtrado.
+**react-pivottable-plus** ha sido desarrollado y es mantenido por **Jasp402**, quien ha liderado la re-arquitectura del motor, la implementación de interfaces premium (Tailwind, Shadcn, Radix UI) y la optimización de rendimiento para grandes volúmenes de datos.
