@@ -2,7 +2,7 @@
 
 [![NPM Version](https://img.shields.io/npm/v/react-pivottable-plus.svg)](https://www.npmjs.com/package/react-pivottable-plus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![React 19](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
+[![React 18+](https://img.shields.io/badge/React-%3E%3D18-blue.svg)](https://react.dev/)
 
 **La solución definitiva de Tablas Dinámicas para el ecosistema moderno de React.**
 
@@ -18,26 +18,25 @@
 
 A diferencia de otros forks estancados, `react-pivottable-plus` ofrece:
 
-- **Soporte React 19**: Construido sobre los estándares más recientes.
+- **Soporte React 18+**: Compatible con React 18 y React 19.
 - **UI de Próxima Generación**: Renderizadores modernos integrados.
 - **Paginación Inteligente**: Rendimiento fluido con grandes conjuntos de datos.
+- **SSR Ready**: Compatible con Next.js App Router y Pages Router.
 - **Configuración Cero**: Implementación en segundos con valores por defecto robustos.
 
 ## 📦 Instalación
 
 ```bash
-npm install --save react-pivottable-plus react react-dom
+npm install react-pivottable-plus
 ```
 
-## 🛠️ Uso Básico (Zero Config)
+> **Nota:** `react` y `react-dom` versión `>=18.0.0` son peerDependencies. Deben estar ya instaladas en tu proyecto.
 
-Gracias a las últimas optimizaciones, implementar la tabla dinámica es más sencillo que nunca. La mayoría de las propiedades ya tienen valores por defecto inteligentes.
+## 🛠️ Uso Básico (React / Vite / CRA)
 
 ```jsx
-"use client";
-
 import React, { useState } from 'react';
-import PivotTableUI from 'react-pivottable-plus'; // Importación directa
+import PivotTableUI from 'react-pivottable-plus';
 import 'react-pivottable-plus/pivottable.css';
 
 const data = [
@@ -46,9 +45,8 @@ const data = [
 ];
 
 function App() {
-  // Solo necesitas gestionar el estado si quieres persistir la configuración
   const [state, setState] = useState({});
-  
+
   return (
     <PivotTableUI
       data={data}
@@ -59,22 +57,116 @@ function App() {
 }
 ```
 
-## 🌈 Uso de Renderizadores Modernos
+## ⚡ Uso con Next.js
 
-La librería incluye renderizadores premium listos para usar. No necesitas configurarlos manualmente, solo indica el nombre si ya los has incluido en el objeto `renderers`, o pásalos directamente:
+Esta librería es compatible con Next.js tanto con **App Router** (React Server Components) como con **Pages Router**. Debido a que utiliza hooks de React y acceso al DOM, el componente **debe ejecutarse en el cliente**.
+
+### App Router (recomendado — Next.js 13+)
+
+Crea un componente cliente dedicado para encapsular el pivot table:
 
 ```jsx
-import { TailwindUI } from 'react-pivottable-plus/renderers/TailwindUI';
+// components/PivotWrapper.jsx
+"use client";
 
-// En tu componente:
+import React, { useState } from 'react';
+import PivotTableUI from 'react-pivottable-plus';
+import 'react-pivottable-plus/pivottable.css';
+
+export default function PivotWrapper({ data }) {
+  const [state, setState] = useState({});
+
+  return (
+    <PivotTableUI
+      data={data}
+      onChange={s => setState(s)}
+      {...state}
+    />
+  );
+}
+```
+
+Luego úsalo en cualquier Server Component o página:
+
+```jsx
+// app/page.jsx  (Server Component — sin "use client")
+import PivotWrapper from '@/components/PivotWrapper';
+
+const data = [
+  { producto: "Laptop", ventas: 1500 },
+  { producto: "Monitor", ventas: 300 },
+];
+
+export default function Page() {
+  return <PivotWrapper data={data} />;
+}
+```
+
+### Pages Router (Next.js 12 y anteriores)
+
+```jsx
+// pages/dashboard.jsx
+import dynamic from 'next/dynamic';
+import 'react-pivottable-plus/pivottable.css';
+
+// Importación dinámica para evitar errores de SSR
+const PivotTableUI = dynamic(
+  () => import('react-pivottable-plus'),
+  { ssr: false }
+);
+
+export default function Dashboard() {
+  const [state, setState] = React.useState({});
+  const data = [
+    { producto: "Laptop", ventas: 1500 },
+  ];
+
+  return (
+    <PivotTableUI
+      data={data}
+      onChange={s => setState(s)}
+      {...state}
+    />
+  );
+}
+```
+
+### Solución a errores comunes en Next.js
+
+| Error | Causa | Solución |
+| :--- | :--- | :--- |
+| `ReferenceError: window is not defined` | El componente se renderizó en el servidor | Usar `"use client"` o importación dinámica con `ssr: false` |
+| `Module not found: Can't resolve '...'` | Módulo ESM no transpilado | Agregar a `transpilePackages` en `next.config.js` |
+| `Hydration failed` | Estado diferente entre servidor y cliente | Usar `"use client"` en el componente que contiene el pivot |
+
+Si ves errores de módulos no encontrados, agrega esto a tu `next.config.js`:
+
+```js
+// next.config.js
+const nextConfig = {
+  transpilePackages: ['react-pivottable-plus'],
+};
+
+module.exports = nextConfig;
+```
+
+## 🌈 Uso de Renderizadores Modernos
+
+```jsx
+"use client"; // Requerido en Next.js App Router
+
+import PivotTableUI from 'react-pivottable-plus';
+import { TailwindUI } from 'react-pivottable-plus/renderers/TailwindUI';
+import 'react-pivottable-plus/pivottable.css';
+
 <PivotTableUI
   data={data}
-  renderers={{ Table: TailwindUI }} // Sobrescribe el renderizador por defecto
+  renderers={{ Table: TailwindUI }}
   {...state}
 />
 ```
 
-## 📑 Propiedades Principales (Todas Opcionales)
+## 📑 Propiedades Principales (Todas Opcionales excepto `data`)
 
 | Propiedad | Tipo | Por Defecto | Descripción |
 | :--- | :--- | :--- | :--- |
@@ -86,10 +178,12 @@ import { TailwindUI } from 'react-pivottable-plus/renderers/TailwindUI';
 | `rendererName` | String | `"Table"` | Nombre del renderizador inicial. |
 | `pagination` | Boolean | `false` | Activa el pie de página con paginación. |
 | `pageSize` | Number | `20` | Cantidad de registros por página. |
+| `columnResizing` | Boolean | `false` | Permite redimensionar columnas arrastrando. |
+| `size` | String | `"lg"` | Tamaño de la UI: `"sm"`, `"md"` o `"lg"`. |
 
 ---
 
 Este proyecto es un fork mantenido de `react-pivottable` con el objetivo de proporcionar una experiencia de usuario superior y compatibilidad con las últimas versiones de React.
 
 ## ✍️ Créditos y Autoría
-Esta versión moderna y extendida (`react-pivottable-plus`) ha sido desarrollada y mantenida por **Jasp402**, quien ha liderado la implementación de las nuevas interfaces (Tailwind, Shadcn, Radix), la actualización a React 19 y la optimización del motor de arrastre y filtrado.
+Esta versión moderna y extendida (`react-pivottable-plus`) ha sido desarrollada y mantenida por **Jasp402**, quien ha liderado la implementación de las nuevas interfaces (Tailwind, Shadcn, Radix), la actualización a React 18/19 y la optimización del motor de arrastre y filtrado.

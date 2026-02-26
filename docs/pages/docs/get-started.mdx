@@ -1,22 +1,47 @@
-# Introducción
+# Guía de Inicio Rápido
 
-¡Bienvenido a **react-pivottable-plus**! 
+¡Bienvenido a **react-pivottable-plus**!
 
-Esta es la solución definitiva para el análisis exploratorio de datos en aplicaciones modernas de React. Olvídate de las tablas estáticas; dales a tus usuarios la libertad de analizar datos con una interfaz de clase mundial.
+Esta es la solución definitiva para el análisis exploratorio de datos en aplicaciones modernas de React. Compatible con React 18+, Next.js App Router, Vite, y más.
 
-## Instalación
+---
 
-Instala la librería y sus dependencias principales:
+## Requisitos
+
+- **React** `>=18.0.0`
+- **react-dom** `>=18.0.0`
+- **Node.js** `>=18`
+
+---
+
+## 1. Instalación
 
 ```bash
-npm install react-pivottable-plus react react-dom
+npm install react-pivottable-plus
 ```
 
-## Uso Rápido
+> `react` y `react-dom` deben estar ya instaladas en tu proyecto como peerDependencies.
 
-La librería está diseñada para funcionar con la mínima configuración posible:
+---
+
+## 2. Importar el CSS
+
+El CSS base de la librería **es obligatorio**. Impórtalo una sola vez en tu aplicación:
+
+```js
+import 'react-pivottable-plus/pivottable.css';
+```
+
+En Next.js, este import va en tu `layout.jsx` o en el componente que use el pivot.
+
+---
+
+## 3. Uso básico
+
+### React / Vite / CRA
 
 ```jsx
+import React, { useState } from 'react';
 import PivotTableUI from 'react-pivottable-plus';
 import 'react-pivottable-plus/pivottable.css';
 
@@ -26,11 +51,161 @@ const data = [
 ];
 
 function App() {
-  const [state, setState] = React.useState({});
+  const [state, setState] = useState({});
   return (
     <PivotTableUI
       data={data}
       onChange={s => setState(s)}
+      {...state}
+    />
+  );
+}
+```
+
+---
+
+## 4. Uso con Next.js
+
+La librería usa hooks de React y APIs del navegador, por lo que **siempre debe ejecutarse en el cliente**.
+
+### App Router (Next.js 13+)
+
+Crea un componente cliente separado con la directiva `"use client"`:
+
+```jsx
+// components/PivotWrapper.jsx
+"use client";
+
+import React, { useState } from 'react';
+import PivotTableUI from 'react-pivottable-plus';
+import 'react-pivottable-plus/pivottable.css';
+
+export default function PivotWrapper({ data }) {
+  const [state, setState] = useState({});
+  return (
+    <PivotTableUI
+      data={data}
+      onChange={s => setState(s)}
+      {...state}
+    />
+  );
+}
+```
+
+Luego úsalo en tu Server Component o página:
+
+```jsx
+// app/dashboard/page.jsx
+import PivotWrapper from '@/components/PivotWrapper';
+
+const data = [
+  { producto: "Laptop", ventas: 1500 },
+  { producto: "Monitor", ventas: 300 },
+];
+
+export default function DashboardPage() {
+  return <PivotWrapper data={data} />;
+}
+```
+
+### Pages Router (Next.js 12 y anteriores)
+
+Usa importación dinámica con `ssr: false` para evitar errores de renderizado en el servidor:
+
+```jsx
+// pages/dashboard.jsx
+import dynamic from 'next/dynamic';
+import React, { useState } from 'react';
+import 'react-pivottable-plus/pivottable.css';
+
+const PivotTableUI = dynamic(
+  () => import('react-pivottable-plus'),
+  { ssr: false }
+);
+
+export default function Dashboard() {
+  const [state, setState] = useState({});
+  const data = [
+    { producto: "Laptop", ventas: 1500 },
+  ];
+  return (
+    <PivotTableUI
+      data={data}
+      onChange={s => setState(s)}
+      {...state}
+    />
+  );
+}
+```
+
+### Errores comunes en Next.js
+
+Si ves errores de módulos no encontrados, agrega la librería a `transpilePackages` en tu `next.config.js`:
+
+```js
+// next.config.js
+const nextConfig = {
+  transpilePackages: ['react-pivottable-plus'],
+};
+module.exports = nextConfig;
+```
+
+| Error | Causa | Solución |
+| :--- | :--- | :--- |
+| `window is not defined` | Ejecutándose en SSR | Usar `"use client"` o `ssr: false` |
+| `Module not found` | Módulo ESM no transpilado | Agregar `transpilePackages` |
+| `Hydration failed` | Estado distinto cliente/servidor | Usar `"use client"` en el componente wrapper |
+
+---
+
+## 5. Propiedades Principales
+
+| Propiedad | Tipo | Por Defecto | Descripción |
+| :--- | :--- | :--- | :--- |
+| `data` | Array | `[]` | Datos a analizar (array de objetos). |
+| `onChange` | Function | requerido | Callback que recibe el nuevo estado al interactuar. |
+| `rows` | Array | `[]` | Atributos iniciales en las filas. |
+| `cols` | Array | `[]` | Atributos iniciales en las columnas. |
+| `vals` | Array | `[]` | Atributos para los valores calculados. |
+| `aggregatorName` | String | `"Count"` | Función de agregación inicial. |
+| `rendererName` | String | `"Table"` | Renderizador inicial. |
+| `pagination` | Boolean | `false` | Habilita paginación. |
+| `pageSize` | Number | `20` | Registros por página. |
+| `columnResizing` | Boolean | `false` | Permite redimensionar columnas. |
+| `size` | String | `"lg"` | Tamaño de la UI: `"sm"`, `"md"`, `"lg"`. |
+
+---
+
+## 6. Ejemplo con configuración inicial
+
+```jsx
+"use client"; // Requerido en Next.js App Router
+
+import React, { useState } from 'react';
+import PivotTableUI from 'react-pivottable-plus';
+import 'react-pivottable-plus/pivottable.css';
+
+const data = [
+  { region: "Norte", producto: "Laptop", ventas: 1500, mes: "Enero" },
+  { region: "Sur",   producto: "Monitor", ventas: 300, mes: "Enero" },
+  { region: "Norte", producto: "Monitor", ventas: 800, mes: "Febrero" },
+];
+
+function App() {
+  const [state, setState] = useState({
+    rows: ['region'],
+    cols: ['mes'],
+    vals: ['ventas'],
+    aggregatorName: 'Sum',
+  });
+
+  return (
+    <PivotTableUI
+      data={data}
+      onChange={s => setState(s)}
+      pagination={true}
+      pageSize={20}
+      size="md"
       {...state}
     />
   );
